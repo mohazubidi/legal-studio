@@ -1,0 +1,20 @@
+export interface SupabaseEnv {
+  url: string;
+  anonKey: string;
+}
+
+/**
+ * Reads the public Supabase configuration.
+ * Returns null when not configured so callers can render a setup screen
+ * instead of silently bypassing authentication.
+ */
+export function getSupabaseEnv(): SupabaseEnv | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return null;
+  return { url, anonKey };
+}
+
+export function isSupabaseConfigured(): boolean {
+  return getSupabaseEnv() !== null;
+}

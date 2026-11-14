@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Legal Studio · ليجال ستوديو
 
-## Getting Started
+An Arabic-first, right-to-left LegalTech workspace prototype. It shows how AI can help organise, analyse and draft legal information **without replacing professional legal judgment**.
 
-First, run the development server:
+> **Current stage:** application shell only. This covers authentication, the protected workspace, navigation, and the design system. No AI workflows are implemented. Tool pages show clearly labelled sample output.
+
+## Stack
+
+- Next.js 15 (App Router), React 19, strict TypeScript
+- Tailwind CSS v4 with design tokens in `app/globals.css`
+- shadcn/ui conventions: Radix primitives in `components/ui`
+- Supabase Auth via `@supabase/ssr`, with cookie sessions refreshed in middleware
+
+## Setup
 
 ```bash
+npm install
+cp .env.example .env.local   # add your Supabase URL and anon key
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Create a Supabase project.
+2. Copy the **Project URL** and the **anon public key** into `.env.local`.
+3. Run `supabase/migrations/0001_profiles.sql` in the SQL editor, or with `supabase db push`. It creates the `profiles` table, its row-level security policies, and the signup trigger.
+4. In **Authentication → URL Configuration**, add `http://localhost:3000/auth/callback` as a redirect URL. This is only needed if email confirmation is enabled.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`NEXT_PUBLIC_*` values are inlined at build time, so set them **before** `npm run build` or a deployment build, and rebuild after you change them.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+If the environment variables are missing, the app does **not** fake a session. The workspace shows a "setup required" screen, and the login and sign-up forms are disabled.
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/
+  (auth)/            login, signup, server actions (signIn / signUp / signOut)
+  (workspace)/       protected: layout verifies the user server-side
+    page.tsx         Dashboard
+    matters/ documents/[documentId]/ tools/[toolId]/ outputs/[outputId]/
+    design-system/   live catalogue of every component and state
+  auth/callback/     email-confirmation code exchange
+components/
+  ui/                primitives (button, input, dialog, popover, table, …)
+  legal/             design system: AIResultPanel, ProvenanceItem/Legend,
+                     SourceCitation, DocumentViewer, UploadArea, DataTable,
+                     StatusBadge, ConfirmDialog, ToolCard, PageHeader, Empty/ErrorState
+  layout/            AppShell, sidebar nav, mobile drawer, DisclaimerBar, UserMenu
+  workspace/         page-specific compositions
+config/              navigation, tools (single source for the 6 tools), provenance, constants
+types/legal.ts       domain types
+data/mock.ts         sample data. Replace these accessors with Supabase queries.
+lib/supabase/        env guard, server client, middleware session refresh
+supabase/migrations/ SQL
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Route protection
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The workspace is protected at two levels:
 
-## Deploy on Vercel
+1. `middleware.ts` refreshes the session and redirects anonymous users to `/login?next=…`.
+2. `app/(workspace)/layout.tsx` checks the user again with `supabase.auth.getUser()`, which validates the session with Supabase. It never trusts the cookie alone.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### AI output provenance
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Every AI result item has a `type`. Each type has its own colour, icon and text label, so colour is never the only cue:
+
+| type       | Arabic label          | Meaning                                                      |
+|------------|-----------------------|--------------------------------------------------------------|
+| `source`   | مستند إلى المصدر      | Taken from an uploaded document. Must carry a `SourceCitation`. |
+| `analysis` | تحليل الذكاء الاصطناعي | Inference produced by the model                              |
+| `missing`  | معلومات ناقصة          | Required information that is not in the documents            |
+| `verify`   | يتطلب تحققًا بشريًا    | Must be checked by a professional before approval            |
+
+If a `source` item has no citation, it shows a warning. Approving an output requires an explicit checkbox acknowledgement in `ConfirmDialog`.
+
+## Scripts
+
+`npm run dev` · `npm run lint` · `npm run typecheck` · `npm run build`

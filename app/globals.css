@@ -1,26 +1,152 @@
 @import "tailwindcss";
 
+/*
+ * Legal Studio design tokens.
+ * All colours are defined once here and consumed through Tailwind utilities
+ * (bg-surface, text-muted-foreground, border-border, bg-source-soft, …).
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --background: #f7f6f3;
+  --surface: #ffffff;
+  --surface-muted: #f1efea;
+  --foreground: #1b1b1f;
+  --muted-foreground: #5f5f68;
+  --border: #e4e2dc;
+  --border-strong: #cfccc2;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --primary: #14213d;
+  --primary-hover: #1e2f55;
+  --primary-foreground: #ffffff;
+
+  --accent: #a8864b;
+  --accent-soft: #f4eee2;
+  --ring: #a8864b;
+
+  /* AI provenance — never reuse these for decoration */
+  --source: #2f5d8a;
+  --source-soft: #eef3f8;
+  --analysis: #5b4b8a;
+  --analysis-soft: #f2f0f7;
+  --missing: #85590c;
+  --missing-soft: #fbf5e8;
+  --verify: #a33a2e;
+  --verify-soft: #faefed;
+
+  --success: #2f6b4f;
+  --success-soft: #edf5f0;
+  --danger: #a33a2e;
+  --danger-soft: #faefed;
+
+  --radius: 6px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #121418;
+    --surface: #1a1d23;
+    --surface-muted: #22262d;
+    --foreground: #ecebe7;
+    --muted-foreground: #a3a3ab;
+    --border: #2d3139;
+    --border-strong: #3b404a;
+
+    --primary: #c9d3ea;
+    --primary-hover: #dbe2f2;
+    --primary-foreground: #101626;
+
+    --accent: #c7a56a;
+    --accent-soft: #2a251c;
+    --ring: #c7a56a;
+
+    --source: #8fb4dc;
+    --source-soft: #1c2733;
+    --analysis: #b5a8de;
+    --analysis-soft: #25223a;
+    --missing: #dfb563;
+    --missing-soft: #2d2719;
+    --verify: #e78f84;
+    --verify-soft: #34201e;
+
+    --success: #85c3a3;
+    --success-soft: #1a2a23;
+    --danger: #e78f84;
+    --danger-soft: #34201e;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-ring: var(--ring);
+  --color-source: var(--source);
+  --color-source-soft: var(--source-soft);
+  --color-analysis: var(--analysis);
+  --color-analysis-soft: var(--analysis-soft);
+  --color-missing: var(--missing);
+  --color-missing-soft: var(--missing-soft);
+  --color-verify: var(--verify);
+  --color-verify-soft: var(--verify-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+
+  --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-naskh), "Times New Roman", serif;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "kern";
+    text-rendering: optimizeLegibility;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Document anchors targeted by source citations */
+  [data-anchor]:target {
+    background: var(--source-soft);
+    box-shadow: inset -3px 0 0 var(--source);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0ms !important;
+      animation-duration: 0ms !important;
+    }
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
 }
