@@ -18,7 +18,7 @@ import {
 import type { EvidenceType } from "@/lib/tools/casemap/model-schema";
 import { cn } from "@/lib/utils";
 import { describeDate, type MapLookup } from "./lookup";
-import { Chip, Interpretation, ProvenanceTag, SourceChips } from "./parts";
+import { Chip, Interpretation, ProvenanceTag, SourceChips } from "@/components/tools/shared/parts";
 import { Timeline } from "./timeline";
 
 /** A card that opens its item's sources. No nested interactive content. */

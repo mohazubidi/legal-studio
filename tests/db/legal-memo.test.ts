@@ -182,6 +182,22 @@ describe.skipIf(!url)("legal memo persistence and review", () => {
       expect(rows).toHaveLength(0);
     });
 
+    it("per-item review marks do not reset the review state, and only the owner can set them", async () => {
+      const id = await newMemo();
+      await setStatus(id, "in_review");
+      await db.as("authenticated", alice, (q) =>
+        q(`update outputs set review_marks = '{"x": {"status": "verified", "note": "", "by": "a", "at": "t"}}' where id = $1`, [id]),
+      );
+      const [row] = await db.raw<{ status: string; review_marks: Record<string, unknown> }>("select status, review_marks from outputs where id = $1", [id]);
+      expect(row.status).toBe("in_review");
+      expect(Object.keys(row.review_marks)).toEqual(["x"]);
+      const updated = await db.as("authenticated", bob, (q) => q("update outputs set review_marks = '{}' where id = $1 returning id", [id]));
+      expect(updated).toHaveLength(0);
+      await expect(
+        db.as("authenticated", alice, (q) => q("update outputs set review_marks = '[]' where id = $1", [id])),
+      ).rejects.toThrow(/review_marks_is_object/);
+    });
+
     it("status changes are written to the audit log", async () => {
       const id = await newMemo();
       await setStatus(id, "in_review");

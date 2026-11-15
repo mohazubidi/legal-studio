@@ -1,4 +1,5 @@
 import type { SourceReferenceRow } from "@/types/database";
+import { resolveSourceLinks, type SourceLink } from "@/lib/tools/shared/source-links";
 import { EVIDENCE_TYPES, type EvidenceType } from "./model-schema";
 import type {
   CaseMapClaim,
@@ -166,16 +167,7 @@ export function sortEvents(events: CaseMapEvent[]): CaseMapEvent[] {
 // Source navigation
 // ---------------------------------------------------------------------------
 
-export interface SourceLink {
-  number: number;
-  referenceId: string;
-  documentId: string;
-  documentName: string;
-  location: string | null;
-  excerpt: string;
-  /** Opens the original file (authorised, short-lived signed URL). */
-  href: string;
-}
+export type { SourceLink } from "@/lib/tools/shared/source-links";
 
 /** [م n] numbering in reading order across the whole map. */
 export function numberCaseMapReferences(content: CaseMapContent): Map<string, number> {
@@ -200,23 +192,7 @@ export function getSourceLinks(
   content: CaseMapContent,
   numbers: Map<string, number> = numberCaseMapReferences(content),
 ): SourceLink[] {
-  const byId = new Map(references.map((ref) => [ref.id, ref]));
-  const names = new Map(content.sources.map((s) => [s.document_id, s.file_name]));
-  return referenceIds.flatMap((id) => {
-    const ref = byId.get(id);
-    if (!ref) return [];
-    return [
-      {
-        number: numbers.get(id) ?? 0,
-        referenceId: id,
-        documentId: ref.document_id,
-        documentName: names.get(ref.document_id) ?? "مستند محذوف",
-        location: ref.page_or_section,
-        excerpt: ref.source_text,
-        href: `/api/documents/${ref.document_id}/download`,
-      },
-    ];
-  });
+  return resolveSourceLinks(referenceIds, references, new Map(content.sources.map((s) => [s.document_id, s.file_name])), numbers);
 }
 
 export type CaseMapItemKind = "party" | "claim" | "position" | "event" | "evidence" | "statement" | "missing";

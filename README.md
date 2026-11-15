@@ -21,10 +21,11 @@ npm run dev
 
 1. Create a Supabase project.
 2. Copy the **Project URL** and the **anon public key** into `.env.local`.
-3. Run the migrations **in order** (0001, 0002, 0003), in the SQL editor or with `supabase db push`:
+3. Run the migrations **in order** (0001 → 0004), in the SQL editor or with `supabase db push`:
    - `0001_profiles.sql`: the `profiles` table, its RLS policies and the signup trigger.
    - `0002_core_schema.sql`: matters, documents, outputs, source references, the audit log, every RLS policy, and the private `matter-documents` storage bucket with its policies.
    - `0003_legal_memo.sql`: source kinds and text segments, audio formats, reference segments, the review workflow trigger, and a fix to the 0002 audit trigger.
+   - `0004_review_marks.sql`: per-item review marks on outputs.
 4. In **Authentication → URL Configuration**, add `http://localhost:3000/auth/callback` as a redirect URL. This is only needed if email confirmation is enabled.
 
 `NEXT_PUBLIC_*` values are inlined at build time, so set them **before** `npm run build` or a deployment build, and rebuild after you change them.
@@ -106,6 +107,23 @@ Turns a matter's processed sources into an interactive case map. It never decide
 - **Dates** are kept as written. Hijri dates are converted to Gregorian by the server (Umm al-Qura via `Intl`), not by the model, and marked as converted. Missing day or month parts are never guessed.
 - **Filters:** party, claim, document, evidence type, date range. They are synced to the URL, so a filtered view or an open item (`?item=…`) can be shared.
 - **Shared code:** matter and source handling, citation verification, source indexing and output persistence live in `lib/tools/shared`, `components/tools/shared` and `app/(workspace)/tools/source-actions.ts`, and are used by both tools.
+
+## Contract Compass (`/tools/contract-compass`)
+
+Turns one processed contract into a structured operational view. Its six views are:
+
+- **Contract Snapshot:** parties and terms, each with a status: stated, not stated, unclear, or not verified.
+- **Obligations Matrix:** obligation, responsible party, deadline, clause, source.
+- **Deadlines:** dated items first, then relative periods such as "within 48 hours".
+- **Financial Terms:** payments, plus the liability clause.
+- **Clauses Requiring Review.**
+- **Missing / Unclear information.**
+
+**What it never infers.** Beyond citation checks, every clause number, amount, currency, date, deadline and notice period must literally appear in the cited text. Arabic-Indic digits and thousands separators are handled, and a clause number must match as a whole number, so `7.2` does not match `7.20`. Anything not found is removed and shown as "not verified" or «غير محدد في العقد». A governing law is shown only when the contract states it explicitly and the citation is verified.
+
+**Wording.** Review items use only three labels: «يستحق المراجعة», «قد يترتب عليه أثر تعاقدي», «صياغة تحتاج تحققًا». A note that states a definitive conclusion ("غير قانوني", "باطل", "high risk", …) is replaced with neutral wording, and the replacement is recorded. Definitive conclusions need a configured legal knowledge source; none is integrated yet, so `getLegalKnowledgeSource()` returns `null`.
+
+**Review.** Each item can be marked "verified" or "needs correction" with a note. Marks are stored in `outputs.review_marks` (migration `0004`), so marking does not reset the review state. The output follows the shared draft → in review → reviewed → approved workflow.
 
 ## Architecture
 

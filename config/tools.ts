@@ -23,9 +23,9 @@ export const TOOLS: readonly ToolDefinition[] = [
     id: "contract-compass",
     nameAr: "بوصلة العقود",
     nameEn: "Contract Compass",
-    descriptionAr: "مراجعة بنود العقود وتحديد مواطن المخاطر والبنود الناقصة.",
+    descriptionAr: "عرض تشغيلي للعقد: الالتزامات والمواعيد والشروط المالية، مع بنود تستحق المراجعة ومعلومات ناقصة.",
     icon: Compass,
-    status: "coming_soon",
+    status: "available",
   },
   {
     id: "regdelta",

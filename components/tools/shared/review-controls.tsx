@@ -2,17 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
-import { saveReviewNotesAction, transitionMemoAction } from "@/app/(workspace)/tools/legal-memo/actions";
+import { saveReviewNotesAction, transitionOutputAction } from "@/app/(workspace)/tools/review-actions";
 import { ConfirmDialog } from "@/components/legal/confirm-dialog";
 import { StatusBadge } from "@/components/legal/status-badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { APPROVAL_ACKNOWLEDGEMENT } from "@/config/constants";
-import { canTransition, REVIEW_ACTION_LABELS } from "@/lib/tools/legal-memo/review";
+import { canTransition, REVIEW_ACTION_LABELS } from "@/lib/tools/shared/review";
 import { formatDateTime } from "@/lib/utils";
 import type { OutputStatus } from "@/types/database";
-import { ActionMessage } from "@/components/tools/shared/action-message";
+import { ActionMessage } from "./action-message";
 
 interface ReviewControlsProps {
   outputId: string;
@@ -22,9 +22,12 @@ interface ReviewControlsProps {
   reviewedAt: string | null;
   approvedAt: string | null;
   openItems: { verify: number; missing: number };
+  /** False when the tool has nothing to prepare before review (e.g. no draft step). */
+  requiresDraft?: boolean;
+  reviewAcknowledgement?: string;
 }
 
-const REVIEW_ACKNOWLEDGEMENT = "راجعتُ الوقائع والإحالات والمعلومات الناقصة والمسائل المقترحة";
+const DEFAULT_REVIEW_ACKNOWLEDGEMENT = "راجعتُ العناصر المستخرجة وإحالاتها والمعلومات الناقصة والملاحظات المقترحة";
 
 const ORDER: OutputStatus[] = ["in_review", "reviewed", "approved", "draft"];
 
@@ -33,7 +36,17 @@ const ORDER: OutputStatus[] = ["in_review", "reviewed", "approved", "draft"];
  * explicit actions, each sign-off gated by an acknowledgement checkbox; the
  * database enforces the same transitions.
  */
-export function ReviewControls({ outputId, status, hasDraft, notes, reviewedAt, approvedAt, openItems }: ReviewControlsProps) {
+export function ReviewControls({
+  outputId,
+  status,
+  hasDraft,
+  notes,
+  reviewedAt,
+  approvedAt,
+  openItems,
+  requiresDraft = true,
+  reviewAcknowledgement,
+}: ReviewControlsProps) {
   const router = useRouter();
   const notesId = useId();
   const [value, setValue] = useState(notes ?? "");
@@ -52,12 +65,12 @@ export function ReviewControls({ outputId, status, hasDraft, notes, reviewedAt, 
 
   async function transition(to: OutputStatus, acknowledged: boolean) {
     setMessage(null);
-    const result = await transitionMemoAction(outputId, to, acknowledged);
+    const result = await transitionOutputAction(outputId, to, acknowledged);
     if (!result.ok) setMessage({ text: result.message, tone: "error" });
     router.refresh();
   }
 
-  const actions = ORDER.filter((to) => canTransition(status, to)).filter((to) => to !== "in_review" || hasDraft);
+  const actions = ORDER.filter((to) => canTransition(status, to)).filter((to) => to !== "in_review" || hasDraft || !requiresDraft);
 
   return (
     <div className="space-y-4">
@@ -85,7 +98,7 @@ export function ReviewControls({ outputId, status, hasDraft, notes, reviewedAt, 
       <ActionMessage message={message?.text ?? null} tone={message?.tone ?? "success"} />
 
       <div className="flex flex-wrap gap-2 border-t border-border pt-4">
-        {!hasDraft ? <p className="text-xs text-muted-foreground">أنشئ المسودة لتتمكن من إرسالها للمراجعة.</p> : null}
+        {requiresDraft && !hasDraft ? <p className="text-xs text-muted-foreground">أنشئ المسودة لتتمكن من إرسالها للمراجعة.</p> : null}
         {actions.map((to) => (
           <Button
             key={to}
@@ -101,17 +114,17 @@ export function ReviewControls({ outputId, status, hasDraft, notes, reviewedAt, 
       <ConfirmDialog
         open={confirm === "reviewed"}
         onOpenChange={(open) => setConfirm(open ? "reviewed" : null)}
-        title="تأكيد مراجعة المذكرة"
+        title="تأكيد المراجعة"
         description="تأكيد المراجعة لا يعني الاعتماد. يبقى الاعتماد إجراءً منفصلًا."
-        acknowledgement={REVIEW_ACKNOWLEDGEMENT}
+        acknowledgement={reviewAcknowledgement ?? DEFAULT_REVIEW_ACKNOWLEDGEMENT}
         confirmLabel="تأكيد المراجعة"
         onConfirm={() => transition("reviewed", true)}
       />
       <ConfirmDialog
         open={confirm === "approved"}
         onOpenChange={(open) => setConfirm(open ? "approved" : null)}
-        title="اعتماد المذكرة"
-        description="الاعتماد إجراء مهني يُسجَّل باسمك ووقته. أي تعديل لاحق يعيد المذكرة إلى مسودة."
+        title="اعتماد المخرج"
+        description="الاعتماد إجراء مهني يُسجَّل باسمك ووقته. أي تعديل لاحق للمحتوى يعيده إلى مسودة."
         acknowledgement={APPROVAL_ACKNOWLEDGEMENT}
         confirmLabel="اعتماد"
         onConfirm={() => transition("approved", true)}

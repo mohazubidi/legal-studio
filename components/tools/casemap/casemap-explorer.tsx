@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AlertTriangle, CalendarRange, FileWarning, GitCompareArrows, Library, Scale, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { CaseMapContent } from "@/lib/tools/casemap/content";
@@ -15,14 +15,25 @@ import {
   numberCaseMapReferences,
   serializeFilters,
   type CaseMapFilters,
+  type CaseMapItemRef,
   type CaseMapView,
 } from "@/lib/tools/casemap/explore";
-import { cn } from "@/lib/utils";
 import type { SourceReferenceRow } from "@/types/database";
 import { FilterBar } from "./filter-bar";
 import type { MapLookup } from "./lookup";
-import { SourceSheet } from "./source-sheet";
+import { Tabs } from "@/components/legal/tabs";
+import { SourceSheet } from "@/components/tools/shared/source-sheet";
 import { ChronologyView, ClaimsView, ContradictionsView, EvidenceView, MissingView, PartiesView } from "./views";
+
+const ITEM_KIND_LABELS: Record<CaseMapItemRef["kind"], string> = {
+  party: "طرف",
+  claim: "مطالبة",
+  position: "موقف طرف",
+  event: "واقعة",
+  evidence: "دليل",
+  statement: "إفادة متعارضة",
+  missing: "معلومة ناقصة",
+};
 
 const VIEW_META: Record<CaseMapView, { label: string; icon: LucideIcon }> = {
   parties: { label: "الأطراف", icon: Users },
@@ -55,8 +66,6 @@ export function CaseMapExplorer({
 }: CaseMapExplorerProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const tabsId = useId();
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [filters, setFilters] = useState<CaseMapFilters>(initialFilters);
   const [view, setView] = useState<CaseMapView>(initialView);
   const [selectedId, setSelectedId] = useState<string | null>(initialItem);
@@ -103,19 +112,6 @@ export function CaseMapExplorer({
     syncUrl({ filters, view: next, item: null });
   }
 
-  function onTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
-    // RTL: ArrowLeft moves forward, ArrowRight moves back.
-    const delta = event.key === "ArrowLeft" ? 1 : event.key === "ArrowRight" ? -1 : 0;
-    let next = index + delta;
-    if (event.key === "Home") next = 0;
-    else if (event.key === "End") next = CASEMAP_VIEWS.length - 1;
-    else if (delta === 0) return;
-    event.preventDefault();
-    next = (next + CASEMAP_VIEWS.length) % CASEMAP_VIEWS.length;
-    changeView(CASEMAP_VIEWS[next]);
-    tabRefs.current[next]?.focus();
-  }
-
   const counts: Record<CaseMapView, number> = {
     parties: filtered.parties.length,
     chronology: filtered.events.length,
@@ -151,41 +147,12 @@ export function CaseMapExplorer({
       <FilterBar content={content} filters={filters} onChange={changeFilters} />
 
       <div>
-        <div role="tablist" aria-label="عروض خريطة القضية" className="flex gap-1 overflow-x-auto border-b border-border">
-          {CASEMAP_VIEWS.map((key, index) => {
-            const meta = VIEW_META[key];
-            const Icon = meta.icon;
-            const active = view === key;
-            return (
-              <button
-                key={key}
-                ref={(el) => {
-                  tabRefs.current[index] = el;
-                }}
-                id={`${tabsId}-tab-${key}`}
-                role="tab"
-                type="button"
-                aria-selected={active}
-                aria-controls={`${tabsId}-panel-${key}`}
-                tabIndex={active ? 0 : -1}
-                onClick={() => changeView(key)}
-                onKeyDown={(event) => onTabKeyDown(event, index)}
-                className={cn(
-                  "-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm whitespace-nowrap transition-colors",
-                  active ? "border-accent font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <Icon className="size-4" aria-hidden />
-                {meta.label}
-                <span className={cn("tabular rounded-full px-1.5 text-[11px]", active ? "bg-primary text-primary-foreground" : "bg-surface-muted")}>
-                  {counts[key]}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div role="tabpanel" id={`${tabsId}-panel-${view}`} aria-labelledby={`${tabsId}-tab-${view}`} tabIndex={0} className="pt-5 focus-visible:outline-none">
+        <Tabs
+          label="عروض خريطة القضية"
+          items={CASEMAP_VIEWS.map((key) => ({ key, label: VIEW_META[key].label, icon: VIEW_META[key].icon, count: counts[key] }))}
+          value={view}
+          onChange={changeView}
+        >
           {view === "parties" ? (
             <PartiesView
               parties={filtered.parties}
@@ -213,11 +180,21 @@ export function CaseMapExplorer({
           ) : null}
           {view === "contradictions" ? <ContradictionsView contradictions={filtered.contradictions} lookup={lookup} filtered={isFiltered} /> : null}
           {view === "missing" ? <MissingView missing={filtered.missing} lookup={lookup} filtered={isFiltered} /> : null}
-        </div>
+        </Tabs>
       </div>
 
       <SourceSheet
-        item={selected}
+        item={
+          selected
+            ? {
+                kindLabel: ITEM_KIND_LABELS[selected.kind],
+                title: selected.title,
+                detail: selected.detail,
+                interpretation: selected.interpretation,
+                referenced: selected.referenced,
+              }
+            : null
+        }
         links={selected ? lookup.links(selected.referenceIds) : []}
         linksEnabled={!isSample}
         onClose={() => {

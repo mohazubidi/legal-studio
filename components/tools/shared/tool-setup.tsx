@@ -21,6 +21,8 @@ export interface GenerateContext {
   matterId: string;
   processedCount: number;
   blockedReason: string | null;
+  /** The matter's sources, for tools that work on one chosen document. */
+  documents: { id: string; file_name: string; processing_status: string; source_kind: string }[];
 }
 
 interface ToolSetupProps {
@@ -143,7 +145,12 @@ export async function ToolSetup(props: ToolSetupProps) {
 
         <div className="space-y-6">
           <ToolStage n={2} title={props.generateTitle} description={props.generateDescription}>
-            {props.renderGenerate({ matterId: selected.id, processedCount, blockedReason })}
+            {props.renderGenerate({
+              matterId: selected.id,
+              processedCount,
+              blockedReason,
+              documents: docs.map((doc) => ({ id: doc.id, file_name: doc.file_name, processing_status: doc.processing_status, source_kind: doc.source_kind })),
+            })}
           </ToolStage>
 
           <Card>

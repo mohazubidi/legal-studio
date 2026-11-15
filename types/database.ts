@@ -124,6 +124,7 @@ export interface Database {
           content: Json;
           status: OutputStatus;
           review_notes: string | null;
+          review_marks: Json;
           reviewed_at: string | null;
           approved_at: string | null;
           approved_by: string | null;
@@ -137,7 +138,7 @@ export interface Database {
           content?: Json;
           status?: OutputStatus;
         };
-        Update: { title?: string; content?: Json; status?: OutputStatus; review_notes?: string | null };
+        Update: { title?: string; content?: Json; status?: OutputStatus; review_notes?: string | null; review_marks?: Json };
         Relationships: [
           {
             foreignKeyName: "outputs_matter_id_fkey";

@@ -113,7 +113,7 @@ export const MISSING_KIND_LABELS: Record<CaseMapMissing["kind"], string> = {
   processing_error: "مصدر لم يُعالج",
 };
 
-export const UNREFERENCED_LABEL = "غير موثّق بمصدر — يتطلب مراجعة";
+export { UNREFERENCED_LABEL } from "@/lib/tools/shared/labels";
 
 export function parseCaseMapContent(value: unknown): CaseMapContent | null {
   const parsed = caseMapContentSchema.safeParse(value);

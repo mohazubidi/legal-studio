@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { statedDateSchema, type StatedDate } from "@/lib/tools/shared/model-date";
 import { modelCitationSchema } from "@/lib/tools/shared/model-citation";
 
 /**
@@ -11,14 +12,7 @@ const citations = z.array(modelCitationSchema);
 
 export const EVIDENCE_TYPES = ["contract", "correspondence", "financial", "official_record", "statement", "expert", "other"] as const;
 
-/** A date exactly as the source states it; conversion and sorting happen on the server. */
-const statedDate = z.object({
-  text: z.string(),
-  calendar: z.enum(["gregorian", "hijri", "unknown"]),
-  year: z.number().int(),
-  month: z.number().int(),
-  day: z.number().int(),
-});
+const statedDate = statedDateSchema;
 
 export const caseMapSchema = z.object({
   parties: z.array(z.object({ key: z.string(), name: z.string(), role: z.string(), citations })),
@@ -66,5 +60,5 @@ export const caseMapSchema = z.object({
 });
 
 export type CaseMapOutput = z.infer<typeof caseMapSchema>;
-export type StatedDate = z.infer<typeof statedDate>;
+export type { StatedDate };
 export type EvidenceType = (typeof EVIDENCE_TYPES)[number];

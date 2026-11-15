@@ -7,8 +7,7 @@ import { getToolOutput, listToolOutputs, saveToolOutput } from "@/lib/tools/shar
 import { getMatter } from "@/lib/data/matters";
 import { fail, fromPostgrest, ok, type DataResult } from "@/lib/data/result";
 import type { AppSupabaseClient } from "@/lib/supabase/server";
-import { uuidSchema } from "@/lib/validation/schemas";
-import type { Json, OutputRow, OutputStatus, SourceReferenceRow } from "@/types/database";
+import type { Json, OutputRow, SourceReferenceRow } from "@/types/database";
 import { parseMemoContent, type MemoContent } from "./content";
 import { memoAnalysisSchema, memoDraftSchema } from "./model-schema";
 import {
@@ -21,7 +20,6 @@ import {
   totalSourceChars,
 } from "./prompt";
 import { buildMemoRecord } from "./record";
-import { canTransition, requiresAcknowledgement } from "./review";
 
 export interface MemoOutput {
   output: OutputRow;
@@ -160,42 +158,4 @@ export async function saveMemoDraftText(supabase: AppSupabaseClient, outputId: s
     ...memo.data.content,
     draft: { ...draft, text, edited: true, updated_at: new Date().toISOString() },
   });
-}
-
-export async function saveReviewNotes(supabase: AppSupabaseClient, outputId: string, notes: string): Promise<DataResult<null>> {
-  if (notes.length > 10_000) return fail("invalid_input", "ملاحظات المراجعة أطول من الحد المسموح.");
-  if (!uuidSchema.safeParse(outputId).success) return fail("not_found", "المذكرة غير موجودة.");
-  const { data, error } = await supabase
-    .from("outputs")
-    .update({ review_notes: notes.trim() || null })
-    .eq("id", outputId)
-    .select("id")
-    .maybeSingle();
-  if (error) return fromPostgrest(error, "saveReviewNotes");
-  return data ? ok(null) : fail("not_found", "المذكرة غير موجودة.");
-}
-
-/**
- * Moves a memo through review. "reviewed" and "approved" are sign-offs: they
- * require the caller to pass an explicit acknowledgement, and the database
- * rejects any transition outside the allowed path.
- */
-export async function transitionMemo(
-  supabase: AppSupabaseClient,
-  outputId: string,
-  to: OutputStatus,
-  acknowledged: boolean,
-): Promise<DataResult<null>> {
-  const memo = await getMemo(supabase, outputId);
-  if (!memo.ok) return memo;
-  const from = memo.data.output.status;
-  if (!canTransition(from, to)) return fail("invalid_input", "لا يمكن الانتقال إلى هذه الحالة من الحالة الحالية.");
-  if (requiresAcknowledgement(to) && !acknowledged) {
-    return fail("invalid_input", "يجب الإقرار بالمراجعة قبل تنفيذ هذا الإجراء.");
-  }
-  if (to === "in_review" && !memo.data.content.draft) {
-    return fail("invalid_input", "أنشئ مسودة المذكرة قبل إرسالها للمراجعة.");
-  }
-  const { error } = await supabase.from("outputs").update({ status: to }).eq("id", outputId);
-  return error ? fromPostgrest(error, "transitionMemo") : ok(null);
 }

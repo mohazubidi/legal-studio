@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { AlertTriangle, Bot, FileText } from "lucide-react";
-import { UNREFERENCED_LABEL } from "@/lib/tools/casemap/content";
-import type { SourceLink } from "@/lib/tools/casemap/explore";
+import { UNREFERENCED_LABEL } from "@/lib/tools/shared/labels";
+import type { SourceLink } from "@/lib/tools/shared/source-links";
 import { cn } from "@/lib/utils";
 
 /** Marks extraction vs. missing source. Colour is never the only cue: icon + text. */

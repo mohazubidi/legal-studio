@@ -6,12 +6,15 @@ import { Loader2, Sparkles } from "lucide-react";
 import type { ActionResult } from "@/app/(workspace)/tools/source-actions";
 import { Button } from "@/components/ui/button";
 import { ActionMessage } from "./action-message";
+import type { GenerateContext } from "./tool-setup";
 
 interface GenerateOutputProps {
   matterId: string;
   aiConfigured: boolean;
   processedCount: number;
   blockedReason: string | null;
+  /** Part of the shared generate context; this button works on all processed sources and does not use it. */
+  documents?: GenerateContext["documents"];
   /** Server action that generates and saves the output. */
   action: (matterId: string) => Promise<ActionResult<{ outputId: string }>>;
   /** The new output opens at `${outputPath}/${outputId}`. */

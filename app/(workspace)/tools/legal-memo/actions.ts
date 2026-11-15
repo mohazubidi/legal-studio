@@ -9,11 +9,7 @@ import {
   generateMemoAnalysis,
   generateMemoDraft,
   saveMemoDraftText,
-  saveReviewNotes,
-  transitionMemo,
 } from "@/lib/tools/legal-memo/service";
-import { outputStatusSchema, uuidSchema } from "@/lib/validation/schemas";
-import type { OutputStatus } from "@/types/database";
 
 import type { ActionResult } from "../source-actions";
 
@@ -63,26 +59,6 @@ export async function saveDraftAction(outputId: string, text: string): Promise<A
   if (!auth.ok) return auth;
   if (typeof text !== "string") return { ok: false, message: "نص غير صالح." };
   const result = await saveMemoDraftText(auth.supabase, outputId, text);
-  revalidatePath(`${TOOL_PATH}/${outputId}`);
-  return toAction(result);
-}
-
-export async function saveReviewNotesAction(outputId: string, notes: string): Promise<ActionResult> {
-  const auth = await authorized();
-  if (!auth.ok) return auth;
-  if (typeof notes !== "string") return { ok: false, message: "نص غير صالح." };
-  const result = await saveReviewNotes(auth.supabase, outputId, notes);
-  revalidatePath(`${TOOL_PATH}/${outputId}`);
-  return toAction(result);
-}
-
-export async function transitionMemoAction(outputId: string, to: OutputStatus, acknowledged: boolean): Promise<ActionResult> {
-  const auth = await authorized();
-  if (!auth.ok) return auth;
-  if (!uuidSchema.safeParse(outputId).success || !outputStatusSchema.safeParse(to).success) {
-    return { ok: false, message: "طلب غير صالح." };
-  }
-  const result = await transitionMemo(auth.supabase, outputId, to, acknowledged === true);
   revalidatePath(`${TOOL_PATH}/${outputId}`);
   return toAction(result);
 }
