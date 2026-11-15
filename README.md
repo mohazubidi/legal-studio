@@ -21,12 +21,54 @@ npm run dev
 
 1. Create a Supabase project.
 2. Copy the **Project URL** and the **anon public key** into `.env.local`.
-3. Run `supabase/migrations/0001_profiles.sql` in the SQL editor, or with `supabase db push`. It creates the `profiles` table, its row-level security policies, and the signup trigger.
+3. Run the migrations **in order**, in the SQL editor or with `supabase db push`:
+   - `0001_profiles.sql`: the `profiles` table, its RLS policies and the signup trigger.
+   - `0002_core_schema.sql`: matters, documents, outputs, source references, the audit log, every RLS policy, and the private `matter-documents` storage bucket with its policies.
 4. In **Authentication → URL Configuration**, add `http://localhost:3000/auth/callback` as a redirect URL. This is only needed if email confirmation is enabled.
 
 `NEXT_PUBLIC_*` values are inlined at build time, so set them **before** `npm run build` or a deployment build, and rebuild after you change them.
 
 If the environment variables are missing, the app does **not** fake a session. The workspace shows a "setup required" screen, and the login and sign-up forms are disabled.
+
+## Backend
+
+Supabase is the only backend: Postgres, Auth and Storage. There is no ORM. Data access goes through typed Supabase clients (`types/database.ts`), using the **signed-in user's session**. The service-role key is not used anywhere, so Row Level Security applies to every query.
+
+### Data model
+
+| table               | owned through               | notes |
+|---------------------|-----------------------------|-------|
+| `matters`           | `user_id = auth.uid()`      | `user_id` is stamped by the database. Clients cannot set or change it. |
+| `documents`         | `matter_id` → owner         | `processing_status`: `pending → uploaded → processing → processed`, or `failed`. On failure, `processing_error` holds the reason. |
+| `outputs`           | `matter_id` → owner         | `tool_type` is one of the six tools. `content` is JSON. |
+| `source_references` | output + document           | Both must belong to the **same** matter, and the caller must own it. Immutable once written. |
+| `audit_logs`        | `user_id = auth.uid()`      | Append-only. Written by database triggers on every insert, update and delete of matters, documents and outputs, and by the app for downloads. |
+
+### Security boundaries
+
+The database enforces these rules, not the UI:
+
+- **RLS on every table.** Policies check the matter owner on every read and write. `anon` has no privileges.
+- **Column grants.** `user_id`, `matter_id` (on update) and `storage_path` cannot be updated. Audit logs cannot be updated or deleted.
+- **Scoped storage paths.** A check constraint requires `storage_path` to start with `{matter_id}/{document_id}/`, so a row can never point at another user's file.
+- **Private storage.** The `matter-documents` bucket is private, limited to 20 MB, and restricted to the allowed MIME types. An object can be read, uploaded or deleted only if it is the `storage_path` of a document the caller owns. Downloads use 60-second signed URLs.
+- **Server-side validation.** `zod` validates all input. Uploads are checked by extension, declared MIME type **and file signature** (magic bytes). The client-side check is only for convenience.
+
+### Upload API
+
+| method & path | purpose |
+|---|---|
+| `POST /api/matters/{matterId}/documents` | multipart: `file`, plus optional `document_category` and `document_date` (YYYY-MM-DD). Returns 201 with `{ document }`. |
+| `GET /api/matters/{matterId}/documents` | lists the matter's documents |
+| `GET /api/documents/{documentId}` | gets one document |
+| `DELETE /api/documents/{documentId}` | removes the stored object, then the row |
+| `GET /api/documents/{documentId}/download` | 302 redirect to a short-lived signed URL. The download is audited. |
+
+Errors are returned as `{ error: { code, message } }`. Status codes: 400 invalid input, 401 signed out, 404 not found or not yours, 413 too large, 503 Supabase not configured.
+
+Accepted formats: PDF, DOCX, DOC, RTF, ODT, TXT, MD, up to 20 MB. TXT and MD text is stored straight away (`processed`). Other formats stay `uploaded` until the processing pipeline is added.
+
+For the client, use `<UploadArea matterId={id} />` or the `useDocumentUpload(matterId)` hook. Both upload one file at a time and show each file's progress, result or server error.
 
 ## Architecture
 
@@ -48,8 +90,18 @@ components/
 config/              navigation, tools (single source for the 6 tools), provenance, constants
 types/legal.ts       domain types
 data/mock.ts         sample data. Replace these accessors with Supabase queries.
-lib/supabase/        env guard, server client, middleware session refresh
-supabase/migrations/ SQL
+lib/supabase/        env guard, typed server client + requireUser(), middleware session refresh
+lib/data/            data access (matters, documents, outputs, audit): typed results, never throws
+lib/documents/       upload validation (extension, MIME, signature, size) and storage paths
+lib/validation/      zod schemas for all server inputs
+lib/api/             route-handler helpers (authorize, JSON errors)
+app/api/             document upload / download / delete routes
+hooks/               useDocumentUpload
+types/database.ts    database types (Insert/Update mirror the column grants)
+supabase/migrations/ SQL (schema, RLS, storage)
+supabase/tests/      Supabase auth/storage stand-in used by the DB tests
+tests/unit/          validation tests
+tests/db/            RLS and ownership tests against a real Postgres
 ```
 
 ### Route protection
@@ -74,4 +126,7 @@ If a `source` item has no citation, it shows a warning. Approving an output requ
 
 ## Scripts
 
-`npm run dev` · `npm run lint` · `npm run typecheck` · `npm run build`
+`npm run dev` · `npm run lint` · `npm run typecheck` · `npm run build` · `npm test` · `npm run test:db`
+
+- `npm test` runs the unit tests. The DB tests are skipped unless `TEST_DATABASE_URL` is set.
+- `npm run test:db` starts a throwaway local Postgres (15+), applies a minimal stand-in for Supabase's `auth` and `storage` schemas plus every migration, then checks the ownership boundaries as two different users. Nothing is persisted.

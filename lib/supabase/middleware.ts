@@ -38,6 +38,9 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   const { pathname, search } = request.nextUrl;
 
+  // API routes authorize themselves and answer 401 as JSON; never redirect them.
+  if (pathname.startsWith("/api/")) return response;
+
   if (!user && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";

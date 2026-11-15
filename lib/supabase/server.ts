@@ -3,15 +3,19 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 import { getSupabaseEnv, isLocalPreviewEnabled } from "./env";
 
+/** Supabase client typed against the Legal Studio schema. */
+export type AppSupabaseClient = SupabaseClient<Database>;
+
 /** Server-side Supabase client bound to the request cookies. Null when unconfigured. */
-export async function createSupabaseServerClient(): Promise<SupabaseClient | null> {
+export async function createSupabaseServerClient(): Promise<AppSupabaseClient | null> {
   const env = getSupabaseEnv();
   if (!env) return null;
 
   const cookieStore = await cookies();
-  return createServerClient(env.url, env.anonKey, {
+  return createServerClient<Database>(env.url, env.anonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -61,7 +65,7 @@ export const getSessionState = cache(async (): Promise<SessionState> => {
     .from("profiles")
     .select("full_name, organization")
     .eq("id", data.user.id)
-    .maybeSingle<{ full_name: string | null; organization: string | null }>();
+    .maybeSingle();
 
   return {
     kind: "authenticated",
@@ -73,3 +77,20 @@ export const getSessionState = cache(async (): Promise<SessionState> => {
     },
   };
 });
+
+export type AuthContext =
+  | { ok: true; supabase: AppSupabaseClient; user: User }
+  | { ok: false; reason: "unconfigured" | "unauthenticated" };
+
+/**
+ * For route handlers and server actions: a request-scoped client plus a user
+ * verified with Supabase. Every query made with this client runs under the
+ * user's JWT, so Row Level Security applies. The service-role key is never used.
+ */
+export async function requireUser(): Promise<AuthContext> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { ok: false, reason: "unconfigured" };
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) return { ok: false, reason: "unauthenticated" };
+  return { ok: true, supabase, user: data.user };
+}

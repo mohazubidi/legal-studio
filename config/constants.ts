@@ -9,12 +9,31 @@ export const LEGAL_DISCLAIMER =
 
 export const APPROVAL_ACKNOWLEDGEMENT = "راجعتُ المخرجات وأتحمل مسؤولية اعتمادها";
 
+/**
+ * Document formats accepted for upload: MIME type → allowed extensions.
+ * Shared by the browser (UploadArea) and the server (upload route). The server
+ * additionally checks file signatures, and the storage bucket enforces the same list.
+ */
 export const UPLOAD_ACCEPT = {
   "application/pdf": [".pdf"],
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+  "application/msword": [".doc"],
+  "application/rtf": [".rtf"],
+  "application/vnd.oasis.opendocument.text": [".odt"],
+  "text/plain": [".txt"],
+  "text/markdown": [".md"],
 } as const;
 
+export type UploadMimeType = keyof typeof UPLOAD_ACCEPT;
+
+/** Human-readable list for messages, e.g. "PDF، DOCX، …". */
+export const UPLOAD_FORMATS_LABEL = "PDF، DOCX، DOC، RTF، ODT، TXT، MD";
+
+/** 20 MB. Must match documents.file_size_bytes and the bucket's file_size_limit. */
 export const UPLOAD_MAX_BYTES = 20 * 1024 * 1024;
+
+/** Private Supabase Storage bucket for matter documents. */
+export const DOCUMENTS_BUCKET = "matter-documents";
 
 /** Routes that do not require a session. Everything else is the protected workspace. */
 export const PUBLIC_ROUTES = ["/login", "/signup", "/auth"] as const;
