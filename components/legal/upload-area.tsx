@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useId, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { AlertCircle, CheckCircle2, FileText, FileUp, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,10 +48,14 @@ export function UploadArea(props: UploadAreaProps) {
 }
 
 function UploadingArea({ matterId, onUploaded, multiple, disabled }: UploadAreaProps & { matterId: string }) {
+  const router = useRouter();
   const { items, busy, upload, clear } = useDocumentUpload(matterId, { onUploaded });
+  // Re-render the server-side source list once the batch is stored, including failed
+  // attempts (they are kept as failed sources), so the new files can be processed.
+  const uploadAndRefresh = (files: File[]) => void upload(files).then(() => router.refresh());
   return (
     <div>
-      <DropZone multiple={multiple} disabled={disabled} onFiles={(files) => void upload(files)} />
+      <DropZone multiple={multiple} disabled={disabled} onFiles={uploadAndRefresh} />
       {items.length > 0 ? <UploadList items={items} busy={busy} onClear={clear} /> : null}
     </div>
   );

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { FileAudio, FileText, RotateCcw, Trash2 } from "lucide-react";
 import {
@@ -12,18 +11,10 @@ import { FileName } from "@/components/legal/file-name";
 import { StatusBadge } from "@/components/legal/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatFileSize } from "@/lib/utils";
-import type { DocumentRow, SourceKind } from "@/types/database";
+import { SOURCE_KIND_LABELS } from "@/lib/tools/shared/labels";
+import type { DocumentRow } from "@/types/database";
 import { ActionMessage } from "./action-message";
 
-export const SOURCE_KIND_LABELS: Record<SourceKind, string> = {
-  document: "مستند",
-  pasted_text: "نص ملصق",
-  lawyer_notes: "ملاحظات المحامي",
-  meeting_transcript: "محضر اجتماع",
-  audio_recording: "تسجيل صوتي",
-  intake_form: "إجابات نموذج الاستقبال",
-  client_statement: "رواية العميل",
-};
 
 interface SourcesPanelProps {
   matterId: string;
@@ -36,7 +27,6 @@ interface SourcesPanelProps {
 
 /** Stage 1: every source with its processing state, error, and retry. */
 export function SourcesPanel({ matterId, documents, transcriptionConfigured }: SourcesPanelProps) {
-  const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ text: string; tone: "error" | "success" } | null>(null);
@@ -50,7 +40,6 @@ export function SourcesPanel({ matterId, documents, transcriptionConfigured }: S
       const result = await action();
       setBusyId(null);
       setMessage(result.ok ? { text: success, tone: "success" } : { text: result.message ?? "تعذّر التنفيذ.", tone: "error" });
-      router.refresh();
     });
   }
 

@@ -3,19 +3,16 @@ import Link from "next/link";
 import { Database } from "lucide-react";
 import { ErrorState } from "@/components/legal/empty-state";
 import { StatusBadge } from "@/components/legal/status-badge";
-import { UploadArea } from "@/components/legal/upload-area";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getTranscriptionConfig } from "@/lib/ai/config";
 import { listDocuments } from "@/lib/data/documents";
 import { listMatters } from "@/lib/data/matters";
 import { createSupabaseServerClient, getSessionState } from "@/lib/supabase/server";
 import { listToolOutputs } from "@/lib/tools/shared/output";
 import { formatDateTime } from "@/lib/utils";
 import type { ToolType } from "@/types/database";
+import { MatterSources } from "./matter-sources";
 import { NewMatterForm } from "./new-matter-form";
-import { SourcesPanel } from "./sources-panel";
-import { TextSourceForm } from "./text-source-form";
 
 export interface GenerateContext {
   matterId: string;
@@ -127,20 +124,7 @@ export async function ToolSetup(props: ToolSetupProps) {
           title="المصادر ومعالجتها"
           description="ارفع المستندات والتسجيلات، أو الصق نصًا أو ملاحظات أو محضر اجتماع. تُستخرج النصوص مع الصفحة أو القسم، وتُحفظ أخطاء المعالجة لكل مصدر."
         >
-          {documents.ok ? (
-            <SourcesPanel matterId={selected.id} documents={docs} transcriptionConfigured={getTranscriptionConfig() !== null} />
-          ) : (
-            <ErrorState title="تعذّر تحميل المصادر" description={documents.error.message} />
-          )}
-          <div>
-            <h3 className="mb-2 text-sm font-semibold">رفع ملفات</h3>
-            <UploadArea matterId={selected.id} />
-            <p className="mt-2 text-xs text-muted-foreground">بعد الرفع اضغط «معالجة المصادر». النصوص الملصقة وملفات TXT تُعالج مباشرة.</p>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold">إضافة نص</h3>
-            <TextSourceForm matterId={selected.id} />
-          </div>
+          <MatterSources matterId={selected.id} documents={documents} />
         </ToolStage>
 
         <div className="space-y-6">

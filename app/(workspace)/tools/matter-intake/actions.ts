@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateWorkspace } from "@/app/(workspace)/revalidate";
 import { getAIProvider } from "@/lib/ai/anthropic";
 import { AI_UNCONFIGURED } from "@/lib/ai/provider";
 import { requireUser } from "@/lib/supabase/server";
@@ -20,7 +20,7 @@ async function authorized() {
 }
 
 function done<T>(result: DataResult<T>): ActionResult<T> {
-  revalidatePath("/tools", "layout");
+  revalidateWorkspace();
   return result.ok ? { ok: true, data: result.data } : { ok: false, message: result.error.message };
 }
 

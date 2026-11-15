@@ -9,7 +9,7 @@ import { ProvenanceItem, ProvenanceLegend } from "@/components/legal/provenance"
 import { StatusBadge } from "@/components/legal/status-badge";
 import { DraftEditor } from "@/components/tools/legal-memo/draft-editor";
 import { ReviewControls } from "@/components/tools/shared/review-controls";
-import { SOURCE_KIND_LABELS } from "@/components/tools/shared/sources-panel";
+import { SOURCE_KIND_LABELS } from "@/lib/tools/shared/labels";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isAIConfigured } from "@/lib/ai/config";
 import { createSupabaseServerClient, getSessionState } from "@/lib/supabase/server";
@@ -229,7 +229,12 @@ export default async function MemoReviewPage({ params }: Props) {
           </Section>
 
           <Section id="draft" title="المسودة الأولى" description="المرحلة 6: نص قابل للتعديل. أرقام [م n] تشير إلى قائمة الإحالات.">
-            <DraftEditor outputId={output.id} status={output.status} aiConfigured={isAIConfigured()} draft={content.draft} />
+            <DraftEditor
+              outputId={output.id}
+              status={output.status}
+              aiConfigured={isAIConfigured()}
+              draft={content.draft}
+            />
           </Section>
         </div>
 

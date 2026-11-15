@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { saveReviewNotesAction, transitionOutputAction } from "@/app/(workspace)/tools/review-actions";
 import { ConfirmDialog } from "@/components/legal/confirm-dialog";
@@ -47,7 +46,6 @@ export function ReviewControls({
   requiresDraft = true,
   reviewAcknowledgement,
 }: ReviewControlsProps) {
-  const router = useRouter();
   const notesId = useId();
   const [value, setValue] = useState(notes ?? "");
   const [pending, startTransition] = useTransition();
@@ -59,7 +57,6 @@ export function ReviewControls({
     startTransition(async () => {
       const result = await saveReviewNotesAction(outputId, value);
       setMessage(result.ok ? { text: "حُفظت ملاحظات المراجعة.", tone: "success" } : { text: result.message, tone: "error" });
-      router.refresh();
     });
   }
 
@@ -67,7 +64,6 @@ export function ReviewControls({
     setMessage(null);
     const result = await transitionOutputAction(outputId, to, acknowledged);
     if (!result.ok) setMessage({ text: result.message, tone: "error" });
-    router.refresh();
   }
 
   const actions = ORDER.filter((to) => canTransition(status, to)).filter((to) => to !== "in_review" || hasDraft || !requiresDraft);

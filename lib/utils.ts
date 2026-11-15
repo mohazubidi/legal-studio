@@ -5,13 +5,22 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Timestamps are shown in one fixed zone. Without it the server (usually UTC) and
+ * the browser (the user's zone) format the same instant differently, and every
+ * client component showing a time fails hydration.
+ */
+export const DISPLAY_TIME_ZONE = "Asia/Riyadh";
+
 const dateFormatter = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", {
+  timeZone: DISPLAY_TIME_ZONE,
   day: "numeric",
   month: "long",
   year: "numeric",
 });
 
 const dateTimeFormatter = new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", {
+  timeZone: DISPLAY_TIME_ZONE,
   day: "numeric",
   month: "short",
   year: "numeric",

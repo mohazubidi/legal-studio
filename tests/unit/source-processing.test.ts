@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { extractSegments, rtfToText, segmentParagraphs } from "@/lib/documents/extraction";
+import { extractSegments, looksLikeVisualOrderArabic, rtfToText, segmentParagraphs, VISUAL_ORDER_MESSAGE } from "@/lib/documents/extraction";
 import { validateUpload } from "@/lib/documents/validation";
 import { segmentsFromTranscript } from "@/lib/ai/transcription";
 
@@ -126,5 +128,30 @@ describe("audio uploads", () => {
       ok: false,
       reason: "signature_mismatch",
     });
+  });
+});
+
+describe("Arabic PDFs stored in display order", () => {
+  const fixture = (name: string) => new Uint8Array(readFileSync(join(__dirname, "..", "fixtures", name)));
+
+  it("detects shaped glyphs in display order", () => {
+    expect(looksLikeVisualOrderArabic(".01/09/2025 هﺎﺼﻗأ ﺪﻋﻮﻣ ﻲﻓ وعﺮﺸﻤﻟا ﻢﻴﻠﺴﺘﺑ ولﺎﻘﻤﻟا مﺰﺘﻠﻳ :5 دةﺎﻤﻟا")).toBe(true);
+    expect(looksLikeVisualOrderArabic("المادة 5: يلتزم المقاول بتسليم المشروع في موعد أقصاه 01/09/2025.")).toBe(false);
+    // A stray ligature in otherwise normal text is not enough.
+    expect(looksLikeVisualOrderArabic("ﷲ " + "المادة الأولى من العقد ".repeat(5))).toBe(false);
+  });
+
+  it("fails a browser-printed PDF with a clear reason instead of storing reversed text", async () => {
+    const result = await extractSegments("application/pdf", fixture("arabic-visual-order.pdf"));
+    expect(result).toEqual({ ok: false, message: VISUAL_ORDER_MESSAGE });
+  });
+
+  it("keeps a word-processor PDF, page by page", async () => {
+    const result = await extractSegments("application/pdf", fixture("arabic-logical-order.pdf"));
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.segments[0].label).toBe("صفحة 1");
+      expect(result.segments[0].text).toContain("يلتزم المقاول بتسليم المشروع");
+    }
   });
 });

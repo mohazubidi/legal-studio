@@ -2,7 +2,6 @@
 
 import { FileName } from "@/components/legal/file-name";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { AlertTriangle, Bot, CheckCircle2, FileText, FolderPlus, MessageSquareQuote, Pencil, Plus, Save, Trash2, X } from "lucide-react";
 import { finalizeIntakeAction, saveBriefEditsAction } from "@/app/(workspace)/tools/matter-intake/actions";
@@ -82,7 +81,6 @@ interface BriefProps {
 }
 
 export function IntakeBrief({ outputId, content, references, isSample = false }: BriefProps) {
-  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<BriefEdits>(() => editsFromContent(content));
   const [pending, startTransition] = useTransition();
@@ -115,7 +113,6 @@ export function IntakeBrief({ outputId, content, references, isSample = false }:
       }
       setEditing(false);
       setMessage({ text: "حُفظت تعديلاتك على الملخص.", tone: "success" });
-      router.refresh();
     });
   }
 
@@ -126,7 +123,6 @@ export function IntakeBrief({ outputId, content, references, isSample = false }:
       setMessage({ text: result.message, tone: "error" });
       return;
     }
-    router.refresh();
   }
 
   const setField = (key: (typeof FIELD_KEYS)[number], patch: Partial<BriefEdits["fields"]["client"]>) =>

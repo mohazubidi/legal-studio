@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { submitIntakeFormAction } from "@/app/(workspace)/tools/matter-intake/actions";
@@ -15,7 +14,6 @@ import { CLIENT_TYPE_LABELS, CLIENT_TYPES, INTAKE_QUESTIONS, intakeFormSchema, t
  * on the server, where the answers are stored verbatim.
  */
 export function IntakeForm({ matterId, submitted }: { matterId: string; submitted: boolean }) {
-  const router = useRouter();
   const id = useId();
   const [values, setValues] = useState<Record<string, string>>({ client_type: "individual" });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -33,7 +31,6 @@ export function IntakeForm({ matterId, submitted }: { matterId: string; submitte
     startTransition(async () => {
       const result = await submitIntakeFormAction(matterId, values as IntakeFormInput);
       setMessage(result.ok ? { text: "حُفظت الإجابات كما كتبها العميل.", tone: "success" } : { text: result.message, tone: "error" });
-      if (result.ok) router.refresh();
     });
   }
 

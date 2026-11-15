@@ -26,10 +26,6 @@ const VIEW_META: Record<ContractView, { label: string; icon: typeof ClipboardLis
   missing: { label: "الناقص وغير الواضح", icon: FileWarning },
 };
 
-export function parseContractView(value: string | null | undefined): ContractView {
-  return (CONTRACT_VIEWS as readonly string[]).includes(value ?? "") ? (value as ContractView) : "snapshot";
-}
-
 function ClauseTag({ clause }: { clause: string | null }) {
   return clause ? (
     <span className="inline-flex h-5 items-center rounded-sm border border-border-strong bg-surface px-1.5 text-[11px] font-medium">{clause}</span>
@@ -76,7 +72,6 @@ function Empty({ title, description }: { title: string; description?: string }) 
 }
 
 function ReviewMarkEditor({ outputId, itemId, mark }: { outputId: string; itemId: string; mark: ReviewMark | undefined }) {
-  const router = useRouter();
   const [note, setNote] = useState(mark?.note ?? "");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +81,6 @@ function ReviewMarkEditor({ outputId, itemId, mark }: { outputId: string; itemId
     startTransition(async () => {
       const result = await setReviewMarkAction(outputId, itemId, next);
       if (!result.ok) setError(result.message);
-      router.refresh();
     });
   }
 

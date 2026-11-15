@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { addTextSourceAction } from "@/app/(workspace)/tools/source-actions";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,6 @@ const DEFAULT_KINDS: Kind[] = ["pasted_text", "lawyer_notes", "meeting_transcrip
 
 export function TextSourceForm({ matterId, kinds = DEFAULT_KINDS }: { matterId: string; kinds?: Kind[] }) {
   const KINDS = ALL_KINDS.filter((kind) => kinds.includes(kind.value));
-  const router = useRouter();
   const id = useId();
   const [kind, setKind] = useState<Kind>(kinds[0] ?? "pasted_text");
   const [title, setTitle] = useState("");
@@ -39,7 +37,6 @@ export function TextSourceForm({ matterId, kinds = DEFAULT_KINDS }: { matterId: 
       setText("");
       setTitle("");
       setMessage({ text: "أُضيف النص كمصدر وعولج مباشرة.", tone: "success" });
-      router.refresh();
     });
   }
 

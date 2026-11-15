@@ -5,12 +5,12 @@ import { ArrowRight, Bot } from "lucide-react";
 import { ErrorState } from "@/components/legal/empty-state";
 import { PageHeader } from "@/components/legal/page-header";
 import { StatusBadge } from "@/components/legal/status-badge";
-import { ContractCompassView, parseContractView } from "@/components/tools/contract-compass/contract-view";
+import { ContractCompassView } from "@/components/tools/contract-compass/contract-view";
 import { ReviewControls } from "@/components/tools/shared/review-controls";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSupabaseServerClient, getSessionState } from "@/lib/supabase/server";
 import { getContractCompass } from "@/lib/tools/contract-compass/service";
-import { buildContractView, findContractItem } from "@/lib/tools/contract-compass/view";
+import { buildContractView, findContractItem, parseContractView } from "@/lib/tools/contract-compass/view";
 import { parseReviewMarks } from "@/lib/tools/shared/review";
 import { formatDateTime } from "@/lib/utils";
 

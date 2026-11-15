@@ -8,7 +8,10 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ActionMessage } from "./action-message";
 
-/** Creates a matter, then returns to `basePath?matter=<id>` (the tool that opened it). */
+/**
+ * Creates a matter, then returns to `basePath?matter=<id>` (the tool that opened it),
+ * or opens the matter's own page when `basePath` is "/matters".
+ */
 export function NewMatterForm({ basePath }: { basePath: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -27,8 +30,7 @@ export function NewMatterForm({ basePath }: { basePath: string }) {
         setError(result.message);
         return;
       }
-      router.push(`${basePath}?matter=${result.data.id}`);
-      router.refresh();
+      router.push(basePath === "/matters" ? `/matters/${result.data.id}` : `${basePath}?matter=${result.data.id}`);
     });
   }
 

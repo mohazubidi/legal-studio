@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateWorkspace } from "@/app/(workspace)/revalidate";
 import { getAIProvider } from "@/lib/ai/anthropic";
 import { AI_UNCONFIGURED } from "@/lib/ai/provider";
 import type { DataResult } from "@/lib/data/result";
@@ -15,7 +15,6 @@ import type { ActionResult } from "../source-actions";
 
 export type { ActionResult };
 
-const TOOL_PATH = "/tools/legal-memo";
 
 async function authorized() {
   const auth = await requireUser();
@@ -39,7 +38,7 @@ export async function generateMemoAction(matterId: string): Promise<ActionResult
   const provider = getAIProvider();
   if (!provider) return { ok: false, message: AI_UNCONFIGURED.message };
   const result = await generateMemoAnalysis(auth.supabase, provider, matterId);
-  revalidatePath(TOOL_PATH);
+  revalidateWorkspace();
   return toAction(result);
 }
 
@@ -50,7 +49,7 @@ export async function generateDraftAction(outputId: string): Promise<ActionResul
   const provider = getAIProvider();
   if (!provider) return { ok: false, message: AI_UNCONFIGURED.message };
   const result = await generateMemoDraft(auth.supabase, provider, outputId);
-  revalidatePath(`${TOOL_PATH}/${outputId}`);
+  revalidateWorkspace();
   return toAction(result);
 }
 
@@ -59,6 +58,6 @@ export async function saveDraftAction(outputId: string, text: string): Promise<A
   if (!auth.ok) return auth;
   if (typeof text !== "string") return { ok: false, message: "نص غير صالح." };
   const result = await saveMemoDraftText(auth.supabase, outputId, text);
-  revalidatePath(`${TOOL_PATH}/${outputId}`);
+  revalidateWorkspace();
   return toAction(result);
 }

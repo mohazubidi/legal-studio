@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { Loader2, Save, Sparkles } from "lucide-react";
 import { generateDraftAction, saveDraftAction } from "@/app/(workspace)/tools/legal-memo/actions";
@@ -20,9 +19,16 @@ interface DraftEditorProps {
 
 /** Stage 6: generate a first draft, then edit it. Saving an edit returns the memo to draft. */
 export function DraftEditor({ outputId, status, aiConfigured, draft }: DraftEditorProps) {
-  const router = useRouter();
   const textareaId = useId();
   const [text, setText] = useState(draft?.text ?? "");
+  // When the stored draft changes (generated, regenerated or saved), start from the stored
+  // text: stale local state would otherwise overwrite the new draft on the next save.
+  const version = draft?.updated_at ?? null;
+  const [syncedVersion, setSyncedVersion] = useState(version);
+  if (version !== syncedVersion) {
+    setSyncedVersion(version);
+    setText(draft?.text ?? "");
+  }
   const [pending, startTransition] = useTransition();
   const [busy, setBusy] = useState<"save" | "generate" | null>(null);
   const [message, setMessage] = useState<{ text: string; tone: "error" | "success" } | null>(null);
@@ -42,7 +48,6 @@ export function DraftEditor({ outputId, status, aiConfigured, draft }: DraftEdit
         return;
       }
       setMessage({ text: "أُنشئت المسودة. راجعها وعدّلها قبل إرسالها للمراجعة.", tone: "success" });
-      router.refresh();
     });
   }
 
@@ -53,7 +58,6 @@ export function DraftEditor({ outputId, status, aiConfigured, draft }: DraftEdit
       const result = await saveDraftAction(outputId, text);
       setBusy(null);
       setMessage(result.ok ? { text: "حُفظت التعديلات.", tone: "success" } : { text: result.message, tone: "error" });
-      router.refresh();
     });
   }
 

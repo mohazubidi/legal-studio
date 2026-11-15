@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateWorkspace } from "@/app/(workspace)/revalidate";
 import { getAIProvider } from "@/lib/ai/anthropic";
 import { AI_UNCONFIGURED } from "@/lib/ai/provider";
 import { requireUser } from "@/lib/supabase/server";
@@ -23,7 +23,7 @@ export async function generateRegDeltaAction(matterId: string, previousId: strin
   const provider = getAIProvider();
   if (!provider) return { ok: false, message: AI_UNCONFIGURED.message };
   const result = await generateRegDelta(auth.supabase, provider, matterId, previousId, nextId);
-  revalidatePath("/tools/regdelta");
+  revalidateWorkspace();
   return result.ok ? { ok: true, data: result.data } : { ok: false, message: result.error.message };
 }
 
@@ -32,6 +32,6 @@ export async function saveRegDeltaEditsAction(outputId: string, edits: RegDeltaE
   const auth = await authorized();
   if (!auth.ok) return auth;
   const result = await saveRegDeltaEdits(auth.supabase, outputId, edits);
-  revalidatePath("/tools", "layout");
+  revalidateWorkspace();
   return result.ok ? { ok: true, data: null } : { ok: false, message: result.error.message };
 }

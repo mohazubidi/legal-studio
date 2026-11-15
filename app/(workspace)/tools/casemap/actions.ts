@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateWorkspace } from "@/app/(workspace)/revalidate";
 import { getAIProvider } from "@/lib/ai/anthropic";
 import { AI_UNCONFIGURED } from "@/lib/ai/provider";
 import { requireUser } from "@/lib/supabase/server";
@@ -16,6 +16,6 @@ export async function generateCaseMapAction(matterId: string): Promise<ActionRes
   const provider = getAIProvider();
   if (!provider) return { ok: false, message: AI_UNCONFIGURED.message };
   const result = await generateCaseMap(auth.supabase, provider, matterId);
-  revalidatePath("/tools/casemap");
+  revalidateWorkspace();
   return result.ok ? { ok: true, data: result.data } : { ok: false, message: result.error.message };
 }

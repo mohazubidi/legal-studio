@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateWorkspace } from "@/app/(workspace)/revalidate";
 import { createTextSource, deleteDocument, listDocuments, processDocument } from "@/lib/data/documents";
 import { createMatter } from "@/lib/data/matters";
 import { requireUser } from "@/lib/supabase/server";
@@ -11,7 +11,6 @@ import { requireUser } from "@/lib/supabase/server";
  */
 export type ActionResult<T = null> = { ok: true; data: T } | { ok: false; message: string };
 
-const TOOLS_PATH = "/tools";
 
 async function authorized() {
   const auth = await requireUser();
@@ -29,7 +28,7 @@ export async function createMatterAction(input: { matter_name: string; matter_ty
   if (!auth.ok) return auth;
   const result = await createMatter(auth.supabase, input);
   if (!result.ok) return { ok: false, message: result.error.message };
-  revalidatePath(TOOLS_PATH, "layout");
+  revalidateWorkspace();
   return { ok: true, data: { id: result.data.id } };
 }
 
@@ -40,7 +39,7 @@ export async function addTextSourceAction(
   const auth = await authorized();
   if (!auth.ok) return auth;
   const result = await createTextSource(auth.supabase, matterId, input);
-  revalidatePath(TOOLS_PATH, "layout");
+  revalidateWorkspace();
   return result.ok ? { ok: true, data: null } : { ok: false, message: result.error.message };
 }
 
@@ -49,7 +48,7 @@ export async function processSourceAction(documentId: string): Promise<ActionRes
   const auth = await authorized();
   if (!auth.ok) return auth;
   const result = await processDocument(auth.supabase, documentId);
-  revalidatePath(TOOLS_PATH, "layout");
+  revalidateWorkspace();
   if (!result.ok) return { ok: false, message: result.error.message };
   return result.data.processing_status === "failed"
     ? { ok: false, message: result.data.processing_error ?? "تعذّرت المعالجة." }
@@ -71,7 +70,7 @@ export async function processPendingSourcesAction(matterId: string): Promise<Act
     if (result.ok && result.data.processing_status === "processed") processed += 1;
     else failed += 1;
   }
-  revalidatePath(TOOLS_PATH, "layout");
+  revalidateWorkspace();
   return { ok: true, data: { processed, failed } };
 }
 
@@ -79,7 +78,7 @@ export async function removeSourceAction(documentId: string): Promise<ActionResu
   const auth = await authorized();
   if (!auth.ok) return auth;
   const result = await deleteDocument(auth.supabase, documentId);
-  revalidatePath(TOOLS_PATH, "layout");
+  revalidateWorkspace();
   return result.ok ? { ok: true, data: null } : { ok: false, message: result.error.message };
 }
 

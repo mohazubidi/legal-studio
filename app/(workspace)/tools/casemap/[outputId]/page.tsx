@@ -6,6 +6,8 @@ import { ErrorState } from "@/components/legal/empty-state";
 import { PageHeader } from "@/components/legal/page-header";
 import { StatusBadge } from "@/components/legal/status-badge";
 import { CaseMapExplorer } from "@/components/tools/casemap/casemap-explorer";
+import { ReviewControls } from "@/components/tools/shared/review-controls";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createSupabaseServerClient, getSessionState } from "@/lib/supabase/server";
 import { findCaseMapItem, parseFilters, parseView } from "@/lib/tools/casemap/explore";
 import { getCaseMap } from "@/lib/tools/casemap/service";
@@ -34,6 +36,15 @@ export default async function CaseMapOutputPage({ params, searchParams }: Props)
   const { output, content, references } = result.data;
   const itemParam = typeof query.item === "string" ? query.item : null;
   const initialItem = itemParam && findCaseMapItem(content, itemParam) ? itemParam : null;
+  // Items without a verified source, across every collection: each needs a reviewer's check.
+  const unreferenced = [
+    ...content.parties,
+    ...content.claims,
+    ...content.claims.flatMap((claim) => claim.positions),
+    ...content.events,
+    ...content.evidence,
+    ...content.contradictions.flatMap((c) => c.statements),
+  ].filter((item) => item.provenance === "unreferenced").length;
   const initialView = initialItem ? findCaseMapItem(content, initialItem)!.view : parseView(typeof query.view === "string" ? query.view : null);
 
   return (
@@ -63,6 +74,25 @@ export default async function CaseMapOutputPage({ params, searchParams }: Props)
         initialView={initialView}
         initialItem={initialItem}
       />
+      <Card className="mt-6 max-w-2xl">
+        <CardHeader className="block">
+          <CardTitle>المراجعة البشرية</CardTitle>
+          <CardDescription>مسودة ← بانتظار المراجعة ← تمت المراجعة ← معتمدة. لا تُعتمد الخريطة إلا بإجراء صريح من مختص.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ReviewControls
+            outputId={output.id}
+            status={output.status}
+            hasDraft
+            requiresDraft={false}
+            notes={output.review_notes}
+            reviewedAt={output.reviewed_at}
+            approvedAt={output.approved_at}
+            openItems={{ verify: unreferenced, missing: content.missing.length }}
+            reviewAcknowledgement="راجعتُ الأطراف والتسلسل الزمني والمطالبات والأدلة والتعارضات مقابل مصادرها، والمعلومات الناقصة"
+          />
+        </CardContent>
+      </Card>
     </>
   );
 }

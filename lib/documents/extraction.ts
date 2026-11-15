@@ -125,10 +125,30 @@ export function rtfToText(input: string): string {
     .replace(/\\([\\{}])/g, "$1");
 }
 
+export const VISUAL_ORDER_MESSAGE =
+  "النص العربي في ملف PDF هذا مخزّن بترتيب العرض لا بترتيب القراءة، فيُستخرج مقلوبًا وغير قابل للاستشهاد. صدّر المستند من محرر النصوص بصيغة DOCX أو PDF وأعد رفعه.";
+
+/** Arabic letters vs. Arabic presentation forms (contextual glyph codes, U+FB50–U+FDFF and U+FE70–U+FEFF). */
+const ARABIC_LETTER = /[\u0621-\u064A]/gu;
+const ARABIC_PRESENTATION_FORM = /[\uFB50-\uFDFF\uFE70-\uFEFF]/gu;
+
+/**
+ * Some PDF producers (browser "print to PDF", for one) store Arabic as shaped
+ * glyphs in display order. Text extracted from them is reversed and unreadable,
+ * so it must not be offered as a source. Logical-order PDFs map glyphs back to
+ * base letters, so presentation forms are rare in their extracted text.
+ */
+export function looksLikeVisualOrderArabic(text: string): boolean {
+  const forms = text.match(ARABIC_PRESENTATION_FORM)?.length ?? 0;
+  const letters = text.match(ARABIC_LETTER)?.length ?? 0;
+  return forms >= 20 && forms / (forms + letters) > 0.3;
+}
+
 async function extractPdf(bytes: Uint8Array): Promise<ExtractionResult> {
   const { extractText, getDocumentProxy } = await import("unpdf");
   const pdf = await getDocumentProxy(bytes);
   const { text } = await extractText(pdf, { mergePages: false });
+  if (looksLikeVisualOrderArabic(text.join("\n"))) return { ok: false, message: VISUAL_ORDER_MESSAGE };
   return result(text.map((page, index) => ({ id: `p${index + 1}`, label: `صفحة ${index + 1}`, text: normalizeText(page) })));
 }
 

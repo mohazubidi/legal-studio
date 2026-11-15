@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateWorkspace } from "@/app/(workspace)/revalidate";
 import { requireUser } from "@/lib/supabase/server";
 import { saveOutputReviewNotes, setReviewMark, transitionOutput } from "@/lib/tools/shared/review-service";
 import { outputStatusSchema, uuidSchema } from "@/lib/validation/schemas";
@@ -22,7 +22,7 @@ export async function transitionOutputAction(outputId: string, to: OutputStatus,
   if (!auth.ok) return auth;
   if (!uuidSchema.safeParse(outputId).success || !outputStatusSchema.safeParse(to).success) return { ok: false, message: "طلب غير صالح." };
   const result = await transitionOutput(auth.supabase, outputId, to, acknowledged === true);
-  revalidatePath("/tools", "layout");
+  revalidateWorkspace();
   return result.ok ? { ok: true, data: null } : { ok: false, message: result.error.message };
 }
 
@@ -31,7 +31,7 @@ export async function saveReviewNotesAction(outputId: string, notes: string): Pr
   if (!auth.ok) return auth;
   if (typeof notes !== "string") return { ok: false, message: "نص غير صالح." };
   const result = await saveOutputReviewNotes(auth.supabase, outputId, notes);
-  revalidatePath("/tools", "layout");
+  revalidateWorkspace();
   return result.ok ? { ok: true, data: null } : { ok: false, message: result.error.message };
 }
 
@@ -43,6 +43,6 @@ export async function setReviewMarkAction(
   const auth = await authorized();
   if (!auth.ok) return auth;
   const result = await setReviewMark(auth.supabase, outputId, auth.user.id, { itemId, mark });
-  revalidatePath("/tools", "layout");
+  revalidateWorkspace();
   return result.ok ? { ok: true, data: null } : { ok: false, message: result.error.message };
 }

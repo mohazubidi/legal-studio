@@ -1,19 +1,50 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useMemo, useState, type ReactNode } from "react";
 import { Search } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/legal/data-table";
 import { StatusBadge } from "@/components/legal/status-badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatDate } from "@/lib/utils";
-import type { Matter, MatterStatus } from "@/types/legal";
+import type { MatterStatus } from "@/types/legal";
 
-const COLUMNS: readonly DataTableColumn<Matter>[] = [
-  { id: "reference", header: "رقم الملف", cell: (row) => <span dir="ltr">{row.reference}</span>, numeric: true },
-  { id: "title", header: "العنوان", cell: (row) => <span className="font-medium">{row.title}</span> },
-  { id: "client", header: "العميل", cell: (row) => row.client },
-  { id: "area", header: "النوع", cell: (row) => row.practiceArea },
+/** One row of the matters list: a stored matter, or a sample in preview mode. */
+export interface MatterListItem {
+  id: string;
+  reference?: string;
+  title: string;
+  client: string | null;
+  practiceArea: string | null;
+  status: MatterStatus;
+  updatedAt: string;
+  /** Opens the matter; samples have none. */
+  href?: string;
+}
+
+const REFERENCE_COLUMN: DataTableColumn<MatterListItem> = {
+  id: "reference",
+  header: "رقم الملف",
+  cell: (row) => <span dir="ltr">{row.reference ?? "—"}</span>,
+  numeric: true,
+};
+
+const COLUMNS: readonly DataTableColumn<MatterListItem>[] = [
+  {
+    id: "title",
+    header: "العنوان",
+    cell: (row) =>
+      row.href ? (
+        <Link href={row.href} className="font-medium text-foreground underline-offset-4 hover:underline">
+          {row.title}
+        </Link>
+      ) : (
+        <span className="font-medium">{row.title}</span>
+      ),
+  },
+  { id: "client", header: "العميل", cell: (row) => row.client ?? "—" },
+  { id: "area", header: "النوع", cell: (row) => row.practiceArea ?? "—" },
   { id: "status", header: "الحالة", cell: (row) => <StatusBadge status={row.status} /> },
   { id: "updated", header: "آخر تحديث", cell: (row) => formatDate(row.updatedAt), numeric: true },
 ];
@@ -25,7 +56,7 @@ const STATUS_FILTERS: { value: MatterStatus | "all"; label: string }[] = [
   { value: "closed", label: "مغلقة" },
 ];
 
-export function MattersTable({ matters }: { matters: readonly Matter[] }) {
+export function MattersTable({ matters, emptyAction }: { matters: readonly MatterListItem[]; emptyAction?: ReactNode }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<MatterStatus | "all">("all");
 
@@ -34,9 +65,14 @@ export function MattersTable({ matters }: { matters: readonly Matter[] }) {
     return matters.filter(
       (m) =>
         (status === "all" || m.status === status) &&
-        (!q || m.title.includes(q) || m.client.includes(q) || m.reference.toLowerCase().includes(q.toLowerCase())),
+        (!q ||
+          m.title.includes(q) ||
+          (m.client ?? "").includes(q) ||
+          (m.practiceArea ?? "").includes(q) ||
+          (m.reference ?? "").toLowerCase().includes(q.toLowerCase())),
     );
   }, [matters, query, status]);
+  const columns = matters.some((m) => m.reference) ? [REFERENCE_COLUMN, ...COLUMNS] : COLUMNS;
 
   return (
     <Card>
@@ -47,7 +83,7 @@ export function MattersTable({ matters }: { matters: readonly Matter[] }) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث بالعنوان أو العميل أو الرقم"
+            placeholder="ابحث بالعنوان أو العميل أو النوع"
             aria-label="بحث في الملفات"
             className="ps-9"
           />
@@ -73,11 +109,12 @@ export function MattersTable({ matters }: { matters: readonly Matter[] }) {
       </div>
       <DataTable
         caption="قائمة الملفات"
-        columns={COLUMNS}
+        columns={columns}
         rows={rows}
         getRowId={(row) => row.id}
-        emptyTitle="لا توجد ملفات مطابقة"
-        emptyDescription="جرّب تعديل البحث أو عامل التصفية."
+        emptyTitle={matters.length === 0 ? "لا توجد ملفات بعد" : "لا توجد ملفات مطابقة"}
+        emptyDescription={matters.length === 0 ? "أنشئ ملفًا لرفع مستنداته وتشغيل الأدوات عليه." : "جرّب تعديل البحث أو عامل التصفية."}
+        emptyAction={matters.length === 0 ? emptyAction : undefined}
       />
     </Card>
   );

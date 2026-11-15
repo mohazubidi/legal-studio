@@ -18,6 +18,11 @@ export const AMOUNT_NOT_VERIFIED = "لم يُتحقق من المبلغ في ا�
 export const CONTRACT_VIEWS = ["snapshot", "obligations", "deadlines", "financial", "review", "missing"] as const;
 export type ContractView = (typeof CONTRACT_VIEWS)[number];
 
+/** Reads a ?view= value; unknown values open the snapshot. Shared by the server page and the client view. */
+export function parseContractView(value: string | null | undefined): ContractView {
+  return (CONTRACT_VIEWS as readonly string[]).includes(value ?? "") ? (value as ContractView) : "snapshot";
+}
+
 export interface TermRow {
   id: string;
   key: TermKey;

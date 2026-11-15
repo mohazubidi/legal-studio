@@ -56,7 +56,8 @@ export function UserMenu({ profile }: { profile: WorkspaceProfile }) {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <form action={signOut}>
-          <DropdownMenuItem asChild>
+          {/* Keep the menu open on select: closing it unmounts this form before the submit happens. */}
+          <DropdownMenuItem asChild onSelect={(event) => event.preventDefault()}>
             <button type="submit" className="w-full">
               <LogOut aria-hidden />
               تسجيل الخروج

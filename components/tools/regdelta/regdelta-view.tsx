@@ -178,7 +178,6 @@ export function RegDeltaView({ outputId, content, references, initialChange = nu
       }
       setEditing(false);
       setMessage({ text: "حُفظت التعديلات. أعيدت المقارنة إلى حالة المسودة إن كانت قيد المراجعة.", tone: "success" });
-      router.refresh();
     });
   }
 

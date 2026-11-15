@@ -177,8 +177,12 @@ A guided intake that turns a new client's information into a structured **Matter
 app/
   (auth)/            login, signup, server actions (signIn / signUp / signOut)
   (workspace)/       protected: layout verifies the user server-side
-    page.tsx         Dashboard
-    matters/ documents/[documentId]/ tools/[toolId]/ outputs/[outputId]/
+    page.tsx         Dashboard (counts and recent outputs from the database)
+    matters/         list, new, [matterId] (sources, upload, processing, outputs)
+    documents/       library across matters, [documentId] (extracted text, download)
+    outputs/         all outputs; [outputId] opens the output in its own tool
+    tools/           the tools; each has its own output pages
+    revalidate.ts    revalidateWorkspace(): called by every mutating server action
     design-system/   live catalogue of every component and state
   auth/callback/     email-confirmation code exchange
 components/
@@ -190,7 +194,7 @@ components/
   workspace/         page-specific compositions
 config/              navigation, tools (single source for the 6 tools), provenance, constants
 types/legal.ts       domain types
-data/mock.ts         sample data. Replace these accessors with Supabase queries.
+data/mock.ts         labelled samples, shown only in local preview mode (no Supabase)
 lib/supabase/        env guard, typed server client + requireUser(), middleware session refresh
 lib/data/            data access (matters, documents, outputs, audit): typed results, never throws
 lib/documents/       upload validation (extension, MIME, signature, size) and storage paths
@@ -204,6 +208,18 @@ supabase/tests/      Supabase auth/storage stand-in used by the DB tests
 tests/unit/          validation tests
 tests/db/            RLS and ownership tests against a real Postgres
 ```
+
+### Workspace pages and data freshness
+
+- With Supabase configured, every workspace page reads the signed-in user's data under RLS (`lib/data/workspace.ts`). The samples in `data/mock.ts` appear only in local preview mode, under the preview banner.
+- Every mutating server action calls `revalidateWorkspace()`, and the action's response carries the refreshed page. Client components must not add `router.refresh()` after a server action: the second render can race the action's and leave the page stale. Uploads go through an API route, so the upload area refreshes once the batch is stored.
+- There is no `loading.tsx` at the workspace level. A loading boundary above the dynamic `[matterId]` / `[outputId]` pages made Next.js 15.5 drop the page returned by a server action, in production builds only. Output pages keep their own leaf `loading.tsx`.
+- Timestamps are formatted in `Asia/Riyadh` (`DISPLAY_TIME_ZONE` in `lib/utils.ts`), so server and browser render the same text and hydration does not fail for users outside UTC.
+- Server components must not import values (constants, functions) from `"use client"` modules; `tests/unit/client-boundary.test.ts` enforces it.
+
+### Arabic PDFs
+
+Some producers (browser "print to PDF", for example) store Arabic as shaped glyphs in display order. Their extracted text is reversed and cannot be cited, so such a source is marked failed with a request to re-export from the word processor (`looksLikeVisualOrderArabic` in `lib/documents/extraction.ts`). Other PDFs can still lose spaces next to numbers or mis-map the lam-alef ligature; review the extracted text in the document view.
 
 ### Route protection
 

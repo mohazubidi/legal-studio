@@ -25,7 +25,7 @@ export const REVIEW_ACTION_LABELS: Record<OutputStatus, string> = {
   draft: "إعادة إلى مسودة",
   in_review: "إرسال للمراجعة",
   reviewed: "تأكيد المراجعة",
-  approved: "اعتماد المذكرة",
+  approved: "اعتماد",
 };
 
 /** A reviewer's mark on one extracted item. Stored in outputs.review_marks, outside the generated content. */
