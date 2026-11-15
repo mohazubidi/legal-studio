@@ -18,3 +18,12 @@ export function getSupabaseEnv(): SupabaseEnv | null {
 export function isSupabaseConfigured(): boolean {
   return getSupabaseEnv() !== null;
 }
+
+/**
+ * Local UI preview without authentication. Only honoured by the dev server
+ * (`next dev`) and only while Supabase is NOT configured. A production build
+ * ignores it, so it can never bypass real authentication.
+ */
+export function isLocalPreviewEnabled(): boolean {
+  return process.env.NODE_ENV === "development" && process.env.LOCAL_PREVIEW === "1";
+}

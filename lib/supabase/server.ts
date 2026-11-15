@@ -3,7 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { getSupabaseEnv } from "./env";
+import { getSupabaseEnv, isLocalPreviewEnabled } from "./env";
 
 /** Server-side Supabase client bound to the request cookies. Null when unconfigured. */
 export async function createSupabaseServerClient(): Promise<SupabaseClient | null> {
@@ -39,6 +39,7 @@ export interface WorkspaceProfile {
 export type SessionState =
   | { kind: "unconfigured" }
   | { kind: "anonymous" }
+  | { kind: "preview"; profile: WorkspaceProfile }
   | { kind: "authenticated"; user: User; profile: WorkspaceProfile };
 
 /**
@@ -47,7 +48,11 @@ export type SessionState =
  */
 export const getSessionState = cache(async (): Promise<SessionState> => {
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return { kind: "unconfigured" };
+  if (!supabase) {
+    return isLocalPreviewEnabled()
+      ? { kind: "preview", profile: { fullName: "معاينة محلية", organization: "بدون تسجيل دخول", email: null } }
+      : { kind: "unconfigured" };
+  }
 
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return { kind: "anonymous" };

@@ -16,6 +16,16 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
 
   if (session.kind === "unconfigured") return <SetupRequired />;
   if (session.kind === "anonymous") redirect("/login");
+  if (session.kind === "preview") {
+    return (
+      <AppShell profile={session.profile}>
+        <p role="status" className="mb-6 rounded-md border border-missing/30 bg-missing-soft px-4 py-2 text-sm text-missing">
+          وضع المعاينة المحلية: لا يوجد تسجيل دخول حقيقي، والبيانات المعروضة تجريبية. يعمل على خادم التطوير فقط.
+        </p>
+        {children}
+      </AppShell>
+    );
+  }
 
   return <AppShell profile={session.profile}>{children}</AppShell>;
 }
