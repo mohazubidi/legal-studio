@@ -54,3 +54,32 @@ export function stripEffectivenessClaims(text: string): { text: string; removed:
   const kept = sentences.filter((sentence) => !claimsLegalEffect(sentence));
   return { text: kept.join(" ").trim(), removed: sentences.length - kept.length };
 }
+
+/**
+ * Legal advice is not given at intake (or in any organising step): telling the
+ * client what to do, what their rights are, or how a case will end.
+ */
+const ADVICE_PATTERNS = [
+  /(?:^|\s)(?:ننصح|نوصي|ينصح|يوصى|انصح|أنصح)/,
+  /يجب\s*على\s*(?:العميل|الموكل|ك)/,
+  /(?:عليك|يجب\s*عليك|ينبغي\s*عليك|ينبغي\s*لك)\s/,
+  /(?:من\s*حقك|لديك\s*الحق|يحق\s*لك|يحق\s*للعميل)/,
+  /(?:ستكسب|ستخسر|سيكسب|سيخسر|فرص(?:ة)?\s*(?:النجاح|الفوز|كسب))/,
+  /(?:ارفع|قم\s*برفع|بادر\s*برفع)\s*(?:دعوى|قضية)/,
+  /\byou\s+should\b/i,
+  /\bwe\s+recommend\b/i,
+  /\byou\s+(?:will|would)\s+(?:win|lose)\b/i,
+  /\byou\s+have\s+(?:a|the)\s+right\b/i,
+];
+
+export function containsLegalAdvice(text: string): boolean {
+  const normalized = normalizeForMatch(text);
+  return ADVICE_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+/** Removes sentences that give legal advice; returns the cleaned text and how many were removed. */
+export function stripLegalAdvice(text: string): { text: string; removed: number } {
+  const sentences = text.split(/(?<=[.؟!؛\n])\s*/);
+  const kept = sentences.filter((sentence) => !containsLegalAdvice(sentence));
+  return { text: kept.join(" ").trim(), removed: sentences.length - kept.length };
+}

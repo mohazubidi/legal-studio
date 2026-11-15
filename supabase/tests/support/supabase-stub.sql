@@ -1,17 +1,18 @@
 -- Minimal stand-in for the parts of a Supabase database the migrations rely on,
 -- so RLS can be tested against plain Postgres. Not used in production.
+-- Safe to run concurrently in several databases of one cluster (roles are cluster-wide).
 -- Mirrors: roles, auth.users, auth.uid(), storage.buckets/objects,
 -- and Supabase's default grants on the public schema.
 
 do $$ begin
   create role anon nologin noinherit;
-exception when duplicate_object then null; end $$;
+exception when duplicate_object or unique_violation then null; end $$;
 do $$ begin
   create role authenticated nologin noinherit;
-exception when duplicate_object then null; end $$;
+exception when duplicate_object or unique_violation then null; end $$;
 do $$ begin
   create role service_role nologin noinherit bypassrls;
-exception when duplicate_object then null; end $$;
+exception when duplicate_object or unique_violation then null; end $$;
 
 create schema if not exists auth;
 create schema if not exists storage;

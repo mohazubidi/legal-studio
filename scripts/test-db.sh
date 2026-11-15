@@ -34,4 +34,5 @@ trap cleanup EXIT
   -o "-p $PORT -k $WORK -c listen_addresses=''" -w start >/dev/null
 
 export TEST_DATABASE_URL="postgresql://postgres@localhost/postgres?host=$WORK&port=$PORT"
-npx vitest run tests/db "$@"
+# Files share one cluster; run them one at a time.
+npx vitest run tests/db --no-file-parallelism "$@"

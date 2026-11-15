@@ -12,9 +12,18 @@ import {
 import type { MatterRow } from "@/types/database";
 import { fail, fromPostgrest, ok, type DataResult } from "./result";
 
-/** Matters visible to the current user (RLS limits this to their own). */
-export async function listMatters(supabase: AppSupabaseClient): Promise<DataResult<MatterRow[]>> {
-  const { data, error } = await supabase.from("matters").select("*").order("created_at", { ascending: false });
+/**
+ * Matters visible to the current user (RLS limits this to their own).
+ * Provisional intake matters are excluded unless asked for: they appear only
+ * in Matter Intake until the brief is used to create the matter.
+ */
+export async function listMatters(
+  supabase: AppSupabaseClient,
+  options: { intake?: "exclude" | "only" } = {},
+): Promise<DataResult<MatterRow[]>> {
+  let query = supabase.from("matters").select("*").order("created_at", { ascending: false });
+  query = options.intake === "only" ? query.eq("status", "intake") : query.neq("status", "intake");
+  const { data, error } = await query;
   return error ? fromPostgrest(error, "listMatters") : ok(data);
 }
 

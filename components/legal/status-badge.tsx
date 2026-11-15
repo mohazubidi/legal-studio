@@ -13,6 +13,7 @@ const STATUS_STYLES: Record<StatusVariant, BadgeStyle> = {
   reviewed: { label: "تمت المراجعة", className: "bg-success-soft text-success border-success/30" },
   approved: { label: "معتمدة", className: "bg-primary text-primary-foreground border-primary" },
   active: { label: "قائمة", className: "bg-source-soft text-source border-source/30" },
+  intake: { label: "قيد الاستقبال", className: "bg-accent-soft text-foreground border-accent/40" },
   on_hold: { label: "معلّقة", className: "bg-surface-muted text-muted-foreground border-border-strong" },
   closed: { label: "مغلقة", className: "bg-surface-muted text-muted-foreground border-border" },
   available: { label: "متاحة", className: "bg-success-soft text-success border-success/30" },

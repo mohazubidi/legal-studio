@@ -4,7 +4,7 @@ import type { LucideIcon } from "lucide-react";
 export type ProvenanceType = "source" | "analysis" | "missing" | "verify";
 
 export type ReviewStatus = "draft" | "in_review" | "reviewed" | "approved";
-export type MatterStatus = "active" | "on_hold" | "closed";
+export type MatterStatus = "active" | "on_hold" | "closed" | "intake";
 export type ToolStatus = "available" | "coming_soon";
 
 export type StatusVariant =

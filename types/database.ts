@@ -9,10 +9,17 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type MatterStatus = "active" | "on_hold" | "closed";
+export type MatterStatus = "active" | "on_hold" | "closed" | "intake";
 export type DocumentProcessingStatus = "pending" | "uploaded" | "processing" | "processed" | "failed";
 export type OutputStatus = "draft" | "in_review" | "reviewed" | "approved";
-export type SourceKind = "document" | "pasted_text" | "lawyer_notes" | "meeting_transcript" | "audio_recording";
+export type SourceKind =
+  | "document"
+  | "pasted_text"
+  | "lawyer_notes"
+  | "meeting_transcript"
+  | "audio_recording"
+  | "intake_form"
+  | "client_statement";
 
 /** A citable unit of a source's text: a PDF page, a group of paragraphs, or a transcript span. */
 export interface DocumentSegment {

@@ -20,6 +20,8 @@ export const SOURCE_KIND_LABELS: Record<SourceKind, string> = {
   lawyer_notes: "ملاحظات المحامي",
   meeting_transcript: "محضر اجتماع",
   audio_recording: "تسجيل صوتي",
+  intake_form: "إجابات نموذج الاستقبال",
+  client_statement: "رواية العميل",
 };
 
 interface SourcesPanelProps {

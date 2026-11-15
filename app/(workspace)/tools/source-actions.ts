@@ -35,7 +35,7 @@ export async function createMatterAction(input: { matter_name: string; matter_ty
 
 export async function addTextSourceAction(
   matterId: string,
-  input: { kind: "pasted_text" | "lawyer_notes" | "meeting_transcript"; title?: string; text: string },
+  input: { kind: "pasted_text" | "lawyer_notes" | "meeting_transcript" | "client_statement"; title?: string; text: string },
 ): Promise<ActionResult> {
   const auth = await authorized();
   if (!auth.ok) return auth;

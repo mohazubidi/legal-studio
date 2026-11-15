@@ -167,3 +167,18 @@ export async function extractSegments(mimeType: string, bytes: Uint8Array): Prom
     return { ok: false, message: `تعذّر قراءة الملف: ${detail}`.slice(0, 500) };
   }
 }
+
+/**
+ * Segments intake form answers ("السؤال: …\nالإجابة: …" blocks) one question
+ * per segment, labelled by the question, so citations point at the exact answer.
+ */
+export function segmentQuestionAnswers(raw: string): DocumentSegment[] {
+  return normalizeText(raw)
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block, index) => {
+      const question = /^السؤال:\s*(.+)$/m.exec(block)?.[1]?.trim();
+      return { id: `q${index + 1}`, label: question ? `سؤال: ${question}`.slice(0, 80) : `فقرة ${index + 1}`, text: block };
+    });
+}

@@ -8,18 +8,21 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ActionMessage } from "./action-message";
 
-const KINDS = [
+const ALL_KINDS = [
   { value: "pasted_text", label: "نص ملصق" },
   { value: "lawyer_notes", label: "ملاحظات المحامي" },
   { value: "meeting_transcript", label: "محضر أو تفريغ اجتماع" },
+  { value: "client_statement", label: "رواية العميل بكلماته" },
 ] as const;
 
-type Kind = (typeof KINDS)[number]["value"];
+type Kind = (typeof ALL_KINDS)[number]["value"];
+const DEFAULT_KINDS: Kind[] = ["pasted_text", "lawyer_notes", "meeting_transcript"];
 
-export function TextSourceForm({ matterId }: { matterId: string }) {
+export function TextSourceForm({ matterId, kinds = DEFAULT_KINDS }: { matterId: string; kinds?: Kind[] }) {
+  const KINDS = ALL_KINDS.filter((kind) => kinds.includes(kind.value));
   const router = useRouter();
   const id = useId();
-  const [kind, setKind] = useState<Kind>("pasted_text");
+  const [kind, setKind] = useState<Kind>(kinds[0] ?? "pasted_text");
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [pending, startTransition] = useTransition();

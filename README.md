@@ -21,11 +21,12 @@ npm run dev
 
 1. Create a Supabase project.
 2. Copy the **Project URL** and the **anon public key** into `.env.local`.
-3. Run the migrations **in order** (0001 → 0004), in the SQL editor or with `supabase db push`:
+3. Run the migrations **in order** (0001 → 0005), in the SQL editor or with `supabase db push`:
    - `0001_profiles.sql`: the `profiles` table, its RLS policies and the signup trigger.
    - `0002_core_schema.sql`: matters, documents, outputs, source references, the audit log, every RLS policy, and the private `matter-documents` storage bucket with its policies.
    - `0003_legal_memo.sql`: source kinds and text segments, audio formats, reference segments, the review workflow trigger, and a fix to the 0002 audit trigger.
    - `0004_review_marks.sql`: per-item review marks on outputs.
+   - `0005_matter_intake.sql`: the `intake` matter status and the `intake_form` / `client_statement` source kinds.
 4. In **Authentication → URL Configuration**, add `http://localhost:3000/auth/callback` as a redirect URL. This is only needed if email confirmation is enabled.
 
 `NEXT_PUBLIC_*` values are inlined at build time, so set them **before** `npm run build` or a deployment build, and rebuild after you change them.
@@ -147,6 +148,28 @@ Compares Document A (previous version) with Document B (new version) **structura
 - Definitive legal conclusions are replaced.
 
 **Review and editing:** reviewers can edit the explanations, the AI-suggested types, exclusions, impacts and checklist. Extracted text, locations and detected types cannot be edited. Edits are validated on the server, return the comparison to draft, and the shared review workflow applies before approval.
+
+## Matter Intake (`/tools/matter-intake`)
+
+A guided intake that turns a new client's information into a structured **Matter Brief** before the matter exists.
+
+- **Provisional matter.** Starting an intake creates a matter with status `intake` (migration `0005`). It holds the client's material and stays out of the other tools until the brief is used to create the matter.
+- **Inputs:**
+  - **Form answers:** validated server-side with zod, stored verbatim as an `intake_form` source with one citable section per question. Unanswered questions are recorded explicitly.
+  - **The client's free text:** stored as `client_statement`.
+  - **Uploaded documents.**
+  - **Voice recordings:** transcribed through the existing provider. Without one, the page states clearly that transcription is unavailable.
+- **The brief:**
+  - **Fields:** client, relationship, matter type and requested outcome. Each has an AI-organised value and a status: stated (with the client's verified words shown separately), inferred, unclear, not provided, or confirmed by the lawyer.
+  - **Lists:** other parties, events, dates, amounts, and documents received or mentioned.
+  - **Gaps:** missing information, missing documents, contradictions, clarification questions, and a follow-up questionnaire.
+- **Rules applied on the server:**
+  - "Stated" needs a verified quote, otherwise the field becomes inferred.
+  - An empty value is always "not provided".
+  - Dates and amounts must appear in the cited text.
+  - Uploaded files are listed from the sources, not the model.
+  - Sentences giving legal advice are removed.
+- **Edit, then create.** The brief editor is validated on the server: an empty field must be "not provided", and a value cannot hide behind it. An edited value loses the client's quotes and becomes "confirmed". "إنشاء الملف" turns the provisional matter into an active one from the saved brief (client required; nothing filled in for missing fields). Discarding an intake deletes it with its files.
 
 ## Architecture
 

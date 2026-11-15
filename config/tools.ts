@@ -39,9 +39,9 @@ export const TOOLS: readonly ToolDefinition[] = [
     id: "matter-intake",
     nameAr: "استقبال القضايا",
     nameEn: "Matter Intake",
-    descriptionAr: "استقبال منظم للقضايا الجديدة وتحديد المعلومات الناقصة مبكرًا.",
+    descriptionAr: "استقبال موجَّه لمعلومات العميل وتحويلها إلى ملخص منظم يحدد الناقص والتعارضات واستبيان المتابعة، قبل إنشاء الملف.",
     icon: ClipboardList,
-    status: "coming_soon",
+    status: "available",
   },
   {
     id: "legal-content",

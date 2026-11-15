@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { AUDIO_MIME_TYPES, DOCUMENTS_BUCKET, type UploadMimeType } from "@/config/constants";
 import { transcribeAudio } from "@/lib/ai/transcription";
-import { extractSegments, segmentParagraphs } from "@/lib/documents/extraction";
+import { extractSegments, segmentParagraphs, segmentQuestionAnswers } from "@/lib/documents/extraction";
 import { parseSegmentsValue } from "@/lib/tools/shared/segments";
 import { documentStoragePath, SIGNATURE_BYTES, validateUpload } from "@/lib/documents/validation";
 import type { AppSupabaseClient } from "@/lib/supabase/server";
@@ -129,7 +129,7 @@ export async function uploadDocument(
     ? {
         processing_status: "processed" as const,
         extracted_text: inlineText,
-        segments: segmentParagraphs(inlineText) as unknown as Json,
+        segments: (sourceKind === "intake_form" ? segmentQuestionAnswers(inlineText) : segmentParagraphs(inlineText)) as unknown as Json,
       }
     : { processing_status: "uploaded" as const };
 
@@ -201,10 +201,12 @@ const TEXT_SOURCE_LABELS: Record<Exclude<SourceKind, "document" | "audio_recordi
   pasted_text: "نص ملصق",
   lawyer_notes: "ملاحظات المحامي",
   meeting_transcript: "محضر اجتماع",
+  intake_form: "إجابات نموذج الاستقبال",
+  client_statement: "رواية العميل",
 };
 
 export const textSourceSchema = z.object({
-  kind: z.enum(["pasted_text", "lawyer_notes", "meeting_transcript"]),
+  kind: z.enum(["pasted_text", "lawyer_notes", "meeting_transcript", "intake_form", "client_statement"]),
   title: z.string().trim().max(120).optional(),
   text: z.string().trim().min(1, "النص فارغ.").max(200_000, "النص أطول من الحد المسموح (200 ألف حرف)."),
 });
