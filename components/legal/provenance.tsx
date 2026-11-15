@@ -21,9 +21,14 @@ export function ProvenanceItem({ item }: { item: ResultItem }) {
       <p className="text-sm leading-7 text-foreground">
         {item.text}
         {item.citations?.map((citation, index) => (
-          <SourceCitation key={`${citation.documentId}-${citation.page}-${index}`} citation={citation} index={index + 1} />
+          <SourceCitation
+            key={`${citation.documentId}-${citation.location ?? citation.page}-${index}`}
+            citation={citation}
+            index={index + 1}
+          />
         ))}
       </p>
+      {item.note ? <p className="mt-1 text-xs font-medium text-verify">{item.note}</p> : null}
       {missingCitation ? (
         <p className="mt-1 text-xs font-medium text-verify">
           تنبيه: عنصر مصنّف كمستند إلى المصدر دون إحالة — يُعامل كعنصر يتطلب تحققًا.

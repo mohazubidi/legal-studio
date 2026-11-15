@@ -6,7 +6,9 @@ export type DataErrorCode =
   | "forbidden"
   | "conflict"
   | "storage_error"
-  | "database_error";
+  | "database_error"
+  /** The AI or transcription provider failed or is not configured. */
+  | "ai_error";
 
 export interface DataError {
   code: DataErrorCode;
@@ -35,6 +37,8 @@ export function httpStatus(code: DataErrorCode): number {
       return 404;
     case "conflict":
       return 409;
+    case "ai_error":
+      return 502;
     default:
       return 500;
   }

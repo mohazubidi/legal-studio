@@ -249,6 +249,15 @@ describe.skipIf(!url)("database access boundaries", () => {
       expect(row.details).toMatchObject({ from: "pending", to: "uploaded" });
     });
 
+    it("records matter status changes (regression: trigger failed on non-document tables)", async () => {
+      await db.as("authenticated", alice, (q) => q("update matters set status = 'on_hold' where id = $1", [aliceMatter]));
+      const [row] = await db.raw<{ details: { from: string; to: string } }>(
+        "select details from audit_logs where action = 'matter.status_changed' and matter_id = $1",
+        [aliceMatter],
+      );
+      expect(row.details).toMatchObject({ from: "active", to: "on_hold" });
+    });
+
     it("is append-only and cannot be forged for another user", async () => {
       await expect(
         db.as("authenticated", alice, (q) => q("update audit_logs set action = 'x.y'")),

@@ -21,9 +21,10 @@ npm run dev
 
 1. Create a Supabase project.
 2. Copy the **Project URL** and the **anon public key** into `.env.local`.
-3. Run the migrations **in order**, in the SQL editor or with `supabase db push`:
+3. Run the migrations **in order** (0001, 0002, 0003), in the SQL editor or with `supabase db push`:
    - `0001_profiles.sql`: the `profiles` table, its RLS policies and the signup trigger.
    - `0002_core_schema.sql`: matters, documents, outputs, source references, the audit log, every RLS policy, and the private `matter-documents` storage bucket with its policies.
+   - `0003_legal_memo.sql`: source kinds and text segments, audio formats, reference segments, the review workflow trigger, and a fix to the 0002 audit trigger.
 4. In **Authentication → URL Configuration**, add `http://localhost:3000/auth/callback` as a redirect URL. This is only needed if email confirmation is enabled.
 
 `NEXT_PUBLIC_*` values are inlined at build time, so set them **before** `npm run build` or a deployment build, and rebuild after you change them.
@@ -69,6 +70,31 @@ Errors are returned as `{ error: { code, message } }`. Status codes: 400 invalid
 Accepted formats: PDF, DOCX, DOC, RTF, ODT, TXT, MD, up to 20 MB. TXT and MD text is stored straight away (`processed`). Other formats stay `uploaded` until the processing pipeline is added.
 
 For the client, use `<UploadArea matterId={id} />` or the `useDocumentUpload(matterId)` hook. Both upload one file at a time and show each file's progress, result or server error.
+
+## Legal Memo Builder (`/tools/legal-memo`)
+
+The first working tool. It turns a matter's sources into a structured memo draft **for professional review**. It never gives final legal advice.
+
+| Stage | What happens | Where |
+|---|---|---|
+| 1. Source processing | PDF text per page, DOCX/TXT/MD/RTF per paragraph group, audio through the transcription provider. Each source keeps its identity, its `segments` (id + page/section label) and any processing error, and can be retried. | `lib/documents/extraction.ts`, `lib/ai/transcription.ts`, `processDocument` |
+| 2–5. Analysis | One structured Claude call returns facts (parties, dates, amounts, events, relationships, claims, responses, referenced documents), missing/unclear/contradictory information, possible legal issues, research questions and an outline. | `lib/tools/legal-memo/{prompt,model-schema,service}.ts` |
+| Verification | The output is validated with zod. **Every citation's quote is checked against the named segment's text.** A fact with no verified citation is stored as "requires human verification", never as source-derived. Failed sources become missing-information items. Empty sections say «لا تتوفر معلومات كافية في المستندات المرفوعة». | `lib/tools/legal-memo/{citations,record}.ts` |
+| 6. Draft | An editable first draft, written only from the verified material, with `[م n]` markers that point to the reference list. | `generateMemoDraft`, `DraftEditor` |
+| Review | draft → in review → reviewed → **approved**. The two sign-offs need an acknowledgement checkbox. The database trigger rejects skipped steps, stamps `approved_by` / `approved_at`, and returns any edited output to draft. | `0003_legal_memo.sql`, `ReviewControls` |
+
+Citations are `source_references` rows (document, `segment_id`, page/section label, excerpt). Clicking `م n` shows the document, location and excerpt, and links to the original file.
+
+### AI configuration (server-only)
+
+| Variable | Purpose |
+|---|---|
+| `ANTHROPIC_API_KEY` | Enables generation. Without it the tool shows an "unavailable" state. |
+| `LEGAL_STUDIO_AI_MODEL` | Optional, default `claude-opus-5-5` |
+| `LEGAL_STUDIO_AI_EFFORT` | Optional, default `high` |
+| `TRANSCRIPTION_API_URL`, `TRANSCRIPTION_API_KEY`, `TRANSCRIPTION_MODEL` | OpenAI-compatible `/audio/transcriptions` endpoint over HTTPS. Without them, audio sources are stored but marked "transcription unavailable" and are not used. |
+
+Server-side refusal fallback (`fallbacks: "default"`) is enabled, so a safety decline is retried on the API's default fallback model.
 
 ## Architecture
 

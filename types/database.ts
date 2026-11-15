@@ -11,7 +11,16 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 export type MatterStatus = "active" | "on_hold" | "closed";
 export type DocumentProcessingStatus = "pending" | "uploaded" | "processing" | "processed" | "failed";
-export type OutputStatus = "draft" | "in_review" | "reviewed";
+export type OutputStatus = "draft" | "in_review" | "reviewed" | "approved";
+export type SourceKind = "document" | "pasted_text" | "lawyer_notes" | "meeting_transcript" | "audio_recording";
+
+/** A citable unit of a source's text: a PDF page, a group of paragraphs, or a transcript span. */
+export interface DocumentSegment {
+  id: string;
+  label: string;
+  text: string;
+}
+
 export type ToolType = "legal_memo" | "casemap" | "contract_compass" | "regdelta" | "matter_intake" | "legal_content";
 
 export interface Database {
@@ -71,6 +80,8 @@ export interface Database {
           document_category: string | null;
           processing_status: DocumentProcessingStatus;
           processing_error: string | null;
+          source_kind: SourceKind;
+          segments: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -83,6 +94,7 @@ export interface Database {
           storage_path: string;
           document_date?: string | null;
           document_category?: string | null;
+          source_kind?: SourceKind;
         };
         Update: {
           file_name?: string;
@@ -91,6 +103,7 @@ export interface Database {
           document_category?: string | null;
           processing_status?: DocumentProcessingStatus;
           processing_error?: string | null;
+          segments?: Json | null;
         };
         Relationships: [
           {
@@ -110,6 +123,10 @@ export interface Database {
           title: string;
           content: Json;
           status: OutputStatus;
+          review_notes: string | null;
+          reviewed_at: string | null;
+          approved_at: string | null;
+          approved_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -120,7 +137,7 @@ export interface Database {
           content?: Json;
           status?: OutputStatus;
         };
-        Update: { title?: string; content?: Json; status?: OutputStatus };
+        Update: { title?: string; content?: Json; status?: OutputStatus; review_notes?: string | null };
         Relationships: [
           {
             foreignKeyName: "outputs_matter_id_fkey";
@@ -138,9 +155,12 @@ export interface Database {
           document_id: string;
           source_text: string;
           page_or_section: string | null;
+          segment_id: string | null;
           created_at: string;
         };
         Insert: {
+          id?: string;
+          segment_id?: string | null;
           output_id: string;
           document_id: string;
           source_text: string;

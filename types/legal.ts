@@ -3,7 +3,7 @@ import type { LucideIcon } from "lucide-react";
 /** Provenance of every item an AI tool produces. Drives colour, icon and label. */
 export type ProvenanceType = "source" | "analysis" | "missing" | "verify";
 
-export type ReviewStatus = "draft" | "in_review" | "reviewed";
+export type ReviewStatus = "draft" | "in_review" | "reviewed" | "approved";
 export type MatterStatus = "active" | "on_hold" | "closed";
 export type ToolStatus = "available" | "coming_soon";
 
@@ -12,16 +12,26 @@ export type StatusVariant =
   | MatterStatus
   | ToolStatus
   | ProvenanceType
+  | "pending"
+  | "uploaded"
   | "processing"
+  | "processed"
   | "failed";
 
 export interface Citation {
   documentId: string;
   documentName: string;
-  page: number;
+  /** Page number, for paginated sources. */
+  page?: number;
+  /** Human label of the page or section, e.g. "صفحة 3" or "فقرات 4–6". Preferred over `page`. */
+  location?: string;
   /** Paragraph anchor in the DocumentViewer, e.g. "p2-3". */
   anchor?: string;
   excerpt: string;
+  /** Number shown on the chip; defaults to the position within the item. */
+  number?: number;
+  /** Where "view source" leads; defaults to the document page. */
+  href?: string;
 }
 
 export interface ResultItem {
@@ -30,6 +40,8 @@ export interface ResultItem {
   text: string;
   /** Required for `source` items; optional otherwise. */
   citations?: Citation[];
+  /** Short qualifier shown under the text, e.g. why an item needs verification. */
+  note?: string;
 }
 
 export interface ResultSection {

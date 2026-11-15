@@ -7,9 +7,9 @@ export const TOOLS: readonly ToolDefinition[] = [
     id: "legal-memo",
     nameAr: "المذكرة القانونية",
     nameEn: "Legal Memo",
-    descriptionAr: "إعداد مذكرات قانونية منظمة تربط الوقائع بالأسانيد النظامية.",
+    descriptionAr: "تحويل مصادر الملف إلى مسودة مذكرة منظمة: وقائع بإحالات، معلومات ناقصة، ومسائل مقترحة للمراجعة.",
     icon: FileText,
-    status: "coming_soon",
+    status: "available",
   },
   {
     id: "casemap",

@@ -31,6 +31,11 @@ const MIME_ALIASES: Record<UploadMimeType, readonly string[]> = {
   "application/vnd.oasis.opendocument.text": ["application/zip"],
   "text/plain": [],
   "text/markdown": ["text/x-markdown", "text/plain"],
+  "audio/mpeg": ["audio/mp3", "audio/mpeg3", "audio/x-mpeg-3"],
+  "audio/mp4": ["audio/x-m4a", "audio/m4a", "audio/aac", "video/mp4"],
+  "audio/wav": ["audio/x-wav", "audio/wave", "audio/vnd.wave"],
+  "audio/webm": ["video/webm"],
+  "audio/ogg": ["application/ogg", "audio/opus"],
 };
 
 /** Declared types that carry no information and defer to the extension + signature. */
@@ -44,6 +49,22 @@ const ZIP = [0x50, 0x4b, 0x03, 0x04];
 const OLE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
 const PDF = [0x25, 0x50, 0x44, 0x46, 0x2d]; // %PDF-
 const RTF = [0x7b, 0x5c, 0x72, 0x74, 0x66]; // {\rtf
+
+const ID3 = [0x49, 0x44, 0x33]; // ID3 tag before MP3 frames
+const RIFF = [0x52, 0x49, 0x46, 0x46];
+const WAVE = [0x57, 0x41, 0x56, 0x45];
+const EBML = [0x1a, 0x45, 0xdf, 0xa3]; // WebM / Matroska
+const OGG = [0x4f, 0x67, 0x67, 0x53]; // OggS
+const FTYP = [0x66, 0x74, 0x79, 0x70]; // "ftyp" at offset 4 (MP4 / M4A)
+
+function at(bytes: Uint8Array, offset: number, signature: readonly number[]): boolean {
+  return startsWith(bytes.subarray(offset), signature);
+}
+
+function isMp3(bytes: Uint8Array): boolean {
+  // ID3v2 tag, or an MPEG audio frame sync (11 set bits).
+  return startsWith(bytes, ID3) || (bytes.length >= 2 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0);
+}
 
 function isPlainText(bytes: Uint8Array): boolean {
   if (bytes.includes(0)) return false;
@@ -72,6 +93,16 @@ export function matchesSignature(mimeType: UploadMimeType, head: Uint8Array): bo
     case "text/plain":
     case "text/markdown":
       return isPlainText(head);
+    case "audio/mpeg":
+      return isMp3(head);
+    case "audio/mp4":
+      return at(head, 4, FTYP);
+    case "audio/wav":
+      return startsWith(head, RIFF) && at(head, 8, WAVE);
+    case "audio/webm":
+      return startsWith(head, EBML);
+    case "audio/ogg":
+      return startsWith(head, OGG);
   }
 }
 

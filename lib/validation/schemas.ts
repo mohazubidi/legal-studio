@@ -14,7 +14,7 @@ function optionalText(max: number) {
 export const uuidSchema = z.string().uuid();
 
 export const matterStatusSchema = z.enum(["active", "on_hold", "closed"]);
-export const outputStatusSchema = z.enum(["draft", "in_review", "reviewed"]);
+export const outputStatusSchema = z.enum(["draft", "in_review", "reviewed", "approved"]);
 export const toolTypeSchema = z.enum([
   "legal_memo",
   "casemap",

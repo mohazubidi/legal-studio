@@ -1,10 +1,13 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { DOCUMENTS_BUCKET } from "@/config/constants";
+import { z } from "zod";
+import { AUDIO_MIME_TYPES, DOCUMENTS_BUCKET, type UploadMimeType } from "@/config/constants";
+import { transcribeAudio } from "@/lib/ai/transcription";
+import { extractSegments, segmentParagraphs } from "@/lib/documents/extraction";
 import { documentStoragePath, SIGNATURE_BYTES, validateUpload } from "@/lib/documents/validation";
 import type { AppSupabaseClient } from "@/lib/supabase/server";
 import { documentMetadataSchema, firstIssue, uuidSchema, type DocumentMetadataInput } from "@/lib/validation/schemas";
-import type { DocumentRow } from "@/types/database";
+import type { DocumentRow, DocumentSegment, Json, SourceKind, TablesUpdate } from "@/types/database";
 import { getMatter } from "./matters";
 import { fail, fromPostgrest, ok, type DataResult } from "./result";
 
@@ -17,6 +20,18 @@ const INLINE_TEXT_TYPES = new Set(["text/plain", "text/markdown"]);
 /** Postgres text cannot hold NUL; strip it defensively. */
 function toStorableText(text: string): string {
   return text.replaceAll("\u0000", "");
+}
+
+const segmentsSchema = z.array(z.object({ id: z.string(), label: z.string(), text: z.string() }));
+
+/** Reads documents.segments defensively (it is jsonb). */
+export function parseSegments(value: Json | null): DocumentSegment[] {
+  const parsed = segmentsSchema.safeParse(value);
+  return parsed.success ? parsed.data : [];
+}
+
+function isAudio(mimeType: string): boolean {
+  return AUDIO_MIME_TYPES.includes(mimeType as UploadMimeType);
 }
 
 export async function listDocuments(
@@ -51,6 +66,8 @@ export interface UploadDocumentInput {
   matterId: string;
   file: File;
   metadata?: DocumentMetadataInput;
+  /** Defaults to `audio_recording` for audio and `document` otherwise. */
+  sourceKind?: SourceKind;
 }
 
 /**
@@ -66,7 +83,7 @@ export interface UploadDocumentInput {
  */
 export async function uploadDocument(
   supabase: AppSupabaseClient,
-  { matterId, file, metadata }: UploadDocumentInput,
+  { matterId, file, metadata, sourceKind }: UploadDocumentInput,
 ): Promise<DataResult<DocumentRow>> {
   const meta = documentMetadataSchema.safeParse(metadata ?? {});
   if (!meta.success) return fail("invalid_input", firstIssue(meta.error));
@@ -92,6 +109,7 @@ export async function uploadDocument(
       storage_path: storagePath,
       document_category: meta.data.document_category,
       document_date: meta.data.document_date,
+      source_kind: sourceKind ?? (isAudio(check.mimeType) ? "audio_recording" : "document"),
     })
     .select("*")
     .single();
@@ -108,10 +126,12 @@ export async function uploadDocument(
     return fail("storage_error", "تعذّر رفع الملف. سُجّلت المحاولة كفاشلة ويمكنك إعادة المحاولة.");
   }
 
-  const update = INLINE_TEXT_TYPES.has(check.mimeType)
+  const inlineText = INLINE_TEXT_TYPES.has(check.mimeType) ? toStorableText(new TextDecoder("utf-8").decode(bytes)) : null;
+  const update = inlineText
     ? {
         processing_status: "processed" as const,
-        extracted_text: toStorableText(new TextDecoder("utf-8").decode(bytes)),
+        extracted_text: inlineText,
+        segments: segmentParagraphs(inlineText) as unknown as Json,
       }
     : { processing_status: "uploaded" as const };
 
@@ -177,4 +197,80 @@ export async function createDocumentDownloadUrl(
   if (auditError) console.error("[data] audit document.downloaded:", auditError.message);
 
   return ok({ url: data.signedUrl, fileName: document.data.file_name });
+}
+
+const TEXT_SOURCE_LABELS: Record<Exclude<SourceKind, "document" | "audio_recording">, string> = {
+  pasted_text: "نص ملصق",
+  lawyer_notes: "ملاحظات المحامي",
+  meeting_transcript: "محضر اجتماع",
+};
+
+export const textSourceSchema = z.object({
+  kind: z.enum(["pasted_text", "lawyer_notes", "meeting_transcript"]),
+  title: z.string().trim().max(120).optional(),
+  text: z.string().trim().min(1, "النص فارغ.").max(200_000, "النص أطول من الحد المسموح (200 ألف حرف)."),
+});
+
+/**
+ * Stores pasted text, lawyer notes or a meeting transcript as a TXT source of
+ * the matter, through the same validated upload path as files, so every
+ * source has one identity, one storage policy and one citation format.
+ */
+export async function createTextSource(
+  supabase: AppSupabaseClient,
+  matterId: string,
+  input: z.input<typeof textSourceSchema>,
+): Promise<DataResult<DocumentRow>> {
+  const parsed = textSourceSchema.safeParse(input);
+  if (!parsed.success) return fail("invalid_input", firstIssue(parsed.error));
+  const { kind, title, text } = parsed.data;
+  const name = `${(title || TEXT_SOURCE_LABELS[kind]).replace(/[\\/]/g, "-")}.txt`;
+  const file = new File([text], name, { type: "text/plain" });
+  return uploadDocument(supabase, { matterId, file, sourceKind: kind });
+}
+
+/**
+ * Stage 1 for one source: download the stored file, extract or transcribe its
+ * text into citable segments, and record the outcome. Failures are kept on the
+ * row (`failed` + `processing_error`) so they stay visible and can be retried.
+ */
+export async function processDocument(supabase: AppSupabaseClient, documentId: string): Promise<DataResult<DocumentRow>> {
+  const document = await getDocument(supabase, documentId);
+  if (!document.ok) return document;
+  if (document.data.processing_status === "pending" || document.data.processing_status === "processing") {
+    return fail("conflict", "المستند قيد الرفع أو المعالجة حاليًا.");
+  }
+
+  const { error: startError } = await supabase
+    .from("documents")
+    .update({ processing_status: "processing", processing_error: null })
+    .eq("id", documentId);
+  if (startError) return fromPostgrest(startError, "processDocument.start");
+
+  const finish = async (update: TablesUpdate<"documents">) => {
+    const { data, error } = await supabase.from("documents").update(update).eq("id", documentId).select("*").single();
+    return error ? fromPostgrest<DocumentRow>(error, "processDocument.finish") : ok(data);
+  };
+  const failWith = (message: string) =>
+    finish({ processing_status: "failed", processing_error: message.slice(0, 2000) });
+
+  const { data: blob, error: downloadError } = await supabase.storage
+    .from(DOCUMENTS_BUCKET)
+    .download(document.data.storage_path);
+  if (downloadError || !blob) {
+    console.error("[data] processDocument.download:", downloadError?.message);
+    return failWith("تعذّر تنزيل الملف من التخزين لمعالجته.");
+  }
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+
+  const outcome = isAudio(document.data.file_type)
+    ? await transcribeAudio(bytes, document.data.file_type, document.data.file_name)
+    : await extractSegments(document.data.file_type, bytes);
+  if (!outcome.ok) return failWith(outcome.message);
+
+  return finish({
+    processing_status: "processed",
+    extracted_text: toStorableText(outcome.text),
+    segments: outcome.segments as unknown as Json,
+  });
 }

@@ -22,12 +22,20 @@ export const UPLOAD_ACCEPT = {
   "application/vnd.oasis.opendocument.text": [".odt"],
   "text/plain": [".txt"],
   "text/markdown": [".md"],
+  "audio/mpeg": [".mp3"],
+  "audio/mp4": [".m4a"],
+  "audio/wav": [".wav"],
+  "audio/webm": [".webm"],
+  "audio/ogg": [".ogg"],
 } as const;
+
+/** Audio sources are transcribed before they can be cited. */
+export const AUDIO_MIME_TYPES: readonly UploadMimeType[] = ["audio/mpeg", "audio/mp4", "audio/wav", "audio/webm", "audio/ogg"];
 
 export type UploadMimeType = keyof typeof UPLOAD_ACCEPT;
 
 /** Human-readable list for messages, e.g. "PDF، DOCX، …". */
-export const UPLOAD_FORMATS_LABEL = "PDF، DOCX، DOC، RTF، ODT، TXT، MD";
+export const UPLOAD_FORMATS_LABEL = "PDF، DOCX، DOC، RTF، ODT، TXT، MD، وتسجيلات صوتية MP3، M4A، WAV، WEBM، OGG";
 
 /** 20 MB. Must match documents.file_size_bytes and the bucket's file_size_limit. */
 export const UPLOAD_MAX_BYTES = 20 * 1024 * 1024;
