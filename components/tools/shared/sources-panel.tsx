@@ -8,6 +8,7 @@ import {
   processSourceAction,
   removeSourceAction,
 } from "@/app/(workspace)/tools/source-actions";
+import { FileName } from "@/components/legal/file-name";
 import { StatusBadge } from "@/components/legal/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatFileSize } from "@/lib/utils";
@@ -75,7 +76,9 @@ export function SourcesPanel({ matterId, documents, transcriptionConfigured }: S
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{doc.file_name}</p>
+                  <p className="truncate text-sm font-medium">
+                    <FileName name={doc.file_name} />
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {SOURCE_KIND_LABELS[doc.source_kind]} · <span className="tabular">{formatFileSize(doc.file_size_bytes)}</span> ·{" "}
                     {formatDateTime(doc.created_at)}

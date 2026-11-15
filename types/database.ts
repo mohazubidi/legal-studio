@@ -211,6 +211,17 @@ export interface Database {
       owns_matter: { Args: { target_matter_id: string }; Returns: boolean };
       can_reference: { Args: { target_output_id: string; target_document_id: string }; Returns: boolean };
       can_access_document_object: { Args: { object_name: string }; Returns: boolean };
+      finalize_intake: {
+        Args: {
+          p_output_id: string;
+          p_matter_name: string;
+          p_client_name: string;
+          p_matter_type: string | null;
+          p_description: string;
+          p_content: Json;
+        };
+        Returns: string;
+      };
     };
     Enums: {
       matter_status: MatterStatus;

@@ -155,3 +155,23 @@ describe("matter creation from the brief", () => {
     expect(prepareMatterFromBrief(used, { matter_name: "ملف" }).ok).toBe(false);
   });
 });
+
+describe("review fixes", () => {
+  it("does not treat neutral obligations as advice, but still catches advice", async () => {
+    const { containsLegalAdvice, stripLegalAdvice } = await import("@/lib/tools/shared/language-guard");
+    for (const neutral of ["يجب على كلا الطرفين تقديم المستندات.", "يجب على كل طرف الإخطار كتابيًا.", "ما المستندات المتوفرة لديك؟"]) {
+      expect(containsLegalAdvice(neutral), neutral).toBe(false);
+    }
+    for (const advice of ["يجب عليك رفع دعوى.", "يجب على العميل التوقف عن السداد.", "ننصح العميل برفع دعوى.", "يجب على ك ذلك"]) {
+      expect(containsLegalAdvice(advice), advice).toBe(true);
+    }
+    expect(stripLegalAdvice("يجب على كلا الطرفين التسليم. ننصح بالمطالبة.")).toEqual({ text: "يجب على كلا الطرفين التسليم.", removed: 1 });
+  });
+
+  it("does not accept the intake status on the general create/update path", async () => {
+    const { matterCreateSchema, matterUpdateSchema } = await import("@/lib/validation/schemas");
+    expect(matterCreateSchema.safeParse({ matter_name: "x", status: "intake" }).success).toBe(false);
+    expect(matterUpdateSchema.safeParse({ status: "intake" }).success).toBe(false);
+    expect(matterCreateSchema.safeParse({ matter_name: "x", status: "active" }).success).toBe(true);
+  });
+});

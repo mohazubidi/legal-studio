@@ -1,5 +1,6 @@
 "use client";
 
+import { FileName } from "@/components/legal/file-name";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition, type ReactNode } from "react";
@@ -315,7 +316,7 @@ export function IntakeBrief({ outputId, content, references, isSample = false }:
                   {content.documents_received.map((d) => (
                     <li key={d.id} className="flex flex-wrap items-center gap-2 text-sm">
                       <FileText className="size-4 text-muted-foreground" aria-hidden />
-                      <bdi>{d.description}</bdi>
+                      <FileName name={d.description} />
                       <Chip tone={d.origin === "uploaded" ? "accent" : "neutral"}>{d.origin === "uploaded" ? "مرفوع" : "ذكره العميل"}</Chip>
                       {d.provided ? (
                         <span className="text-xs text-success">مستلم</span>

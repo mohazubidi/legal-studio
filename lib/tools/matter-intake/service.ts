@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { StructuredAIProvider } from "@/lib/ai/provider";
 import { createTextSource, deleteDocument, listDocuments } from "@/lib/data/documents";
-import { createMatter, deleteMatter, getMatter } from "@/lib/data/matters";
+import { createIntakeMatter, deleteMatter, getMatter } from "@/lib/data/matters";
 import { fail, fromPostgrest, ok, type DataResult } from "@/lib/data/result";
 import type { AppSupabaseClient } from "@/lib/supabase/server";
 import { getToolOutput, saveToolOutput } from "@/lib/tools/shared/output";
@@ -24,7 +24,7 @@ export interface IntakeOutputData {
 
 /** Starts an intake: a provisional matter that holds the client's material until the brief is reviewed. */
 export async function startIntake(supabase: AppSupabaseClient): Promise<DataResult<{ matterId: string }>> {
-  const created = await createMatter(supabase, { matter_name: `استقبال جديد — ${formatDateTime(new Date().toISOString())}`, status: "intake" });
+  const created = await createIntakeMatter(supabase, `استقبال جديد — ${formatDateTime(new Date().toISOString())}`);
   return created.ok ? ok({ matterId: created.data.id }) : created;
 }
 
@@ -110,11 +110,21 @@ export async function finalizeIntake(supabase: AppSupabaseClient, outputId: stri
   const prepared = prepareMatterFromBrief(loaded.data.content, input);
   if (!prepared.ok) return fail("invalid_input", prepared.message);
 
-  const { error } = await supabase.from("matters").update(prepared.matter).eq("id", matter.data.id).eq("status", "intake");
-  if (error) return fromPostgrest(error, "finalizeIntake.matter");
-  const saved = await writeContent(supabase, outputId, { ...loaded.data.content, finalized: { matter_id: matter.data.id, at: new Date().toISOString() } });
-  if (!saved.ok) return saved;
-  return ok({ matterId: matter.data.id });
+  // One transaction: the brief is marked as used and the matter becomes active together.
+  const finalizedContent = { ...loaded.data.content, finalized: { matter_id: matter.data.id, at: new Date().toISOString() } };
+  const { data: matterId, error } = await supabase.rpc("finalize_intake", {
+    p_output_id: outputId,
+    p_matter_name: prepared.matter.matter_name,
+    p_client_name: prepared.matter.client_name,
+    p_matter_type: prepared.matter.matter_type,
+    p_description: prepared.matter.description,
+    p_content: finalizedContent as unknown as Json,
+  });
+  if (error) {
+    if (error.code === "P0002") return fail("conflict", "اكتمل استقبال هذا الملف وأُنشئ الملف بالفعل.");
+    return fromPostgrest(error, "finalizeIntake");
+  }
+  return ok({ matterId: matterId ?? matter.data.id });
 }
 
 /** Discards an unfinished intake and everything uploaded to it. */

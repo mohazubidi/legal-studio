@@ -26,7 +26,7 @@ npm run dev
    - `0002_core_schema.sql`: matters, documents, outputs, source references, the audit log, every RLS policy, and the private `matter-documents` storage bucket with its policies.
    - `0003_legal_memo.sql`: source kinds and text segments, audio formats, reference segments, the review workflow trigger, and a fix to the 0002 audit trigger.
    - `0004_review_marks.sql`: per-item review marks on outputs.
-   - `0005_matter_intake.sql`: the `intake` matter status and the `intake_form` / `client_statement` source kinds.
+   - `0005_matter_intake.sql`: the `intake` matter status (a matter can never return to it), the `intake_form` / `client_statement` source kinds, and `finalize_intake()`, which creates the matter from a brief in one transaction under RLS.
 4. In **Authentication → URL Configuration**, add `http://localhost:3000/auth/callback` as a redirect URL. This is only needed if email confirmation is enabled.
 
 `NEXT_PUBLIC_*` values are inlined at build time, so set them **before** `npm run build` or a deployment build, and rebuild after you change them.
@@ -153,7 +153,7 @@ Compares Document A (previous version) with Document B (new version) **structura
 
 A guided intake that turns a new client's information into a structured **Matter Brief** before the matter exists.
 
-- **Provisional matter.** Starting an intake creates a matter with status `intake` (migration `0005`). It holds the client's material and stays out of the other tools until the brief is used to create the matter.
+- **Provisional matter.** Starting an intake creates a matter with status `intake` (migration `0005`). It holds the client's material and stays out of the other tools until the brief is used to create the matter. Only `createIntakeMatter` sets that status; the general create/update path rejects it, and a database trigger stops any matter from returning to it. Creating the matter from the brief runs as one transaction (`finalize_intake`), so the matter and the brief cannot end up out of step.
 - **Inputs:**
   - **Form answers:** validated server-side with zod, stored verbatim as an `intake_form` source with one citable section per question. Unanswered questions are recorded explicitly.
   - **The client's free text:** stored as `client_statement`.

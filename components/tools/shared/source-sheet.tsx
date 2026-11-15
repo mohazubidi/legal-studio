@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ExternalLink } from "lucide-react";
 import { Dialog, DialogDescription, DialogTitle, SheetContent } from "@/components/ui/dialog";
 import type { SourceLink } from "@/lib/tools/shared/source-links";
+import { FileName } from "@/components/legal/file-name";
 import { Interpretation, ProvenanceTag } from "./parts";
 
 export interface SourceSheetItem {
@@ -72,7 +73,7 @@ export function SourceSheet({ item, links, onClose, linksEnabled, footer }: Sour
                   {links.map((link) => (
                     <li key={link.referenceId} className="rounded-md border border-source/20 bg-source-soft/50 p-3">
                       <p className="text-xs font-semibold text-source">
-                        [م{link.number}] <bdi>{link.documentName}</bdi>
+                        [م{link.number}] <FileName name={link.documentName} />
                       </p>
                       <p className="tabular mb-2 text-xs text-muted-foreground">{link.location ?? "موضع غير محدد"}</p>
                       <blockquote className="border-s-2 border-source ps-2 font-serif text-[15px] leading-8">«{link.excerpt}»</blockquote>

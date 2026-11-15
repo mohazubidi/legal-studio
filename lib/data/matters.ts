@@ -45,6 +45,18 @@ export async function createMatter(
   return error ? fromPostgrest(error, "createMatter") : ok(data);
 }
 
+/**
+ * Creates a provisional intake matter. The only path that sets status 'intake';
+ * the general create/update schemas reject it, and the database forbids
+ * moving a matter back to intake.
+ */
+export async function createIntakeMatter(supabase: AppSupabaseClient, matterName: string): Promise<DataResult<MatterRow>> {
+  const name = matterName.trim().slice(0, 200);
+  if (!name) return fail("invalid_input", "اسم الاستقبال مطلوب.");
+  const { data, error } = await supabase.from("matters").insert({ matter_name: name, status: "intake" }).select("*").single();
+  return error ? fromPostgrest(error, "createIntakeMatter") : ok(data);
+}
+
 export async function updateMatter(
   supabase: AppSupabaseClient,
   matterId: string,

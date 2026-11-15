@@ -72,6 +72,79 @@ describe.skipIf(!url)("matter intake", () => {
     expect(audit.details).toMatchObject({ from: "intake", to: "active" });
   });
 
+  it("never lets a matter return to intake", async () => {
+    const id = await startIntake();
+    await db.as("authenticated", alice, (q) => q("update matters set status = 'active' where id = $1", [id]));
+    await expect(db.as("authenticated", alice, (q) => q("update matters set status = 'intake' where id = $1", [id]))).rejects.toThrow(
+      /cannot return to intake/,
+    );
+  });
+
+  describe("finalize_intake (one transaction)", () => {
+    const newBrief = async () => {
+      const matter = await startIntake();
+      const brief = await db.as("authenticated", alice, async (q) => {
+        const [row] = await q<{ id: string }>(
+          "insert into outputs (matter_id, tool_type, title, content) values ($1, 'matter_intake', 'ملخص الاستقبال', '{\"finalized\": null}') returning id",
+          [matter],
+        );
+        return row.id;
+      });
+      return { matter, brief };
+    };
+    const finalize = (user: string, brief: string) =>
+      db.as("authenticated", user, (q) =>
+        q<{ finalize_intake: string }>("select public.finalize_intake($1, $2, $3, $4, $5, $6)", [
+          brief,
+          "مؤسسة الريادة ضد البنيان",
+          "مؤسسة الريادة",
+          null,
+          "ملخص الاستقبال",
+          { finalized: { at: "2026-01-01" } },
+        ]),
+      );
+
+    it("activates the matter and marks the brief as used together", async () => {
+      const { matter, brief } = await newBrief();
+      const [row] = await finalize(alice, brief);
+      expect(row.finalize_intake).toBe(matter);
+      const [m] = await db.raw<{ status: string; client_name: string }>("select status, client_name from matters where id = $1", [matter]);
+      expect(m).toEqual({ status: "active", client_name: "مؤسسة الريادة" });
+      const [o] = await db.raw<{ content: { finalized: unknown } }>("select content from outputs where id = $1", [brief]);
+      expect(o.content.finalized).toEqual({ at: "2026-01-01" });
+    });
+
+    it("cannot finalise twice", async () => {
+      const { brief } = await newBrief();
+      await finalize(alice, brief);
+      await expect(finalize(alice, brief)).rejects.toThrow(/already finalised/);
+    });
+
+    it("another user cannot finalise someone else's intake", async () => {
+      const { matter, brief } = await newBrief();
+      await expect(finalize(bob, brief)).rejects.toThrow(/not found or already finalised/);
+      const [m] = await db.raw<{ status: string }>("select status from matters where id = $1", [matter]);
+      expect(m.status).toBe("intake");
+    });
+
+    it("rolls back the brief if the matter cannot be updated", async () => {
+      const { matter, brief } = await newBrief();
+      // An empty name violates the matters check constraint after the brief was written.
+      await expect(
+        db.as("authenticated", alice, (q) => q("select public.finalize_intake($1, '   ', 'x', null, 'd', '{\"finalized\": {\"at\": \"t\"}}')", [brief])),
+      ).rejects.toThrow(/check constraint/);
+      const [o] = await db.raw<{ content: { finalized: unknown } }>("select content from outputs where id = $1", [brief]);
+      expect(o.content.finalized).toBeNull();
+      const [m] = await db.raw<{ status: string }>("select status from matters where id = $1", [matter]);
+      expect(m.status).toBe("intake");
+    });
+
+    it("anonymous callers cannot run it", async () => {
+      const { brief } = await newBrief();
+      await expect(db.as("anon", null, (q) => q("select public.finalize_intake($1, 'x', 'x', null, 'd', '{}')", [brief]))).rejects.toThrow(/permission denied/);
+    });
+  });
+
   it("keeps intake matters out of the regular matter list", async () => {
     const id = await startIntake();
     const listed = await db.as("authenticated", alice, (q) => q<{ id: string }>("select id from matters where status <> 'intake'"));
