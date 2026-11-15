@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkCitation, normalizeForMatch, ReferenceCollector, type IndexedSource } from "@/lib/tools/legal-memo/citations";
+import { checkCitation, normalizeForMatch, ReferenceCollector, type IndexedSource } from "@/lib/tools/shared/citations";
 import { INSUFFICIENT_EVIDENCE, memoContentSchema, type MemoSourceSnapshot } from "@/lib/tools/legal-memo/content";
 import type { MemoAnalysisOutput } from "@/lib/tools/legal-memo/model-schema";
 import { buildAnalysisPrompt, numberReferences } from "@/lib/tools/legal-memo/prompt";

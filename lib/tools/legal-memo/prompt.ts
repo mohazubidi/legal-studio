@@ -1,16 +1,8 @@
 import { INSUFFICIENT_EVIDENCE, type MemoContent } from "./content";
-import type { IndexedSource } from "./citations";
+import type { IndexedSource } from "@/lib/tools/shared/citations";
+import { buildMatterBlock, buildSourcesBlock, escapeXml } from "@/lib/tools/shared/sources";
 
-/** Above this, the request is refused rather than silently truncated. */
-export const MAX_SOURCE_CHARS = 600_000;
-
-function escapeXml(text: string): string {
-  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-}
-
-export function totalSourceChars(sources: IndexedSource[]): number {
-  return sources.reduce((sum, source) => sum + source.segments.reduce((n, s) => n + s.text.length, 0), 0);
-}
+export { MAX_SOURCE_CHARS, totalSourceChars } from "@/lib/tools/shared/sources";
 
 export const ANALYSIS_SYSTEM_PROMPT = `You are a legal analysis assistant inside Legal Studio, a workspace used by lawyers in Saudi Arabia. You prepare structured material for a legal memo that a qualified lawyer will review. You never give final legal advice or conclusions.
 
@@ -29,28 +21,11 @@ Rules:
 8. Fact categories: party (parties and their roles), date, amount, event, relationship (contractual or other legal relationships), claim, response, referenced_document (documents mentioned in the sources, whether or not they were uploaded).
 9. relevant_documents lists the provided sources (by source_id) that matter most, with one line on why.`;
 
-export function buildAnalysisPrompt(matter: { name: string; type: string | null; client: string | null; description: string | null }, sources: IndexedSource[]): string {
-  const header = [
-    `اسم الملف: ${matter.name}`,
-    matter.type ? `نوع الملف: ${matter.type}` : null,
-    matter.client ? `العميل: ${matter.client}` : null,
-    matter.description ? `وصف الملف (من المستخدم، ليس مصدرًا للوقائع): ${matter.description}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  const body = sources
-    .map(
-      (source) =>
-        `<source id="${source.sourceId}" name="${escapeXml(source.fileName)}">\n` +
-        source.segments
-          .map((segment) => `<segment id="${segment.id}" label="${escapeXml(segment.label)}">\n${escapeXml(segment.text)}\n</segment>`)
-          .join("\n") +
-        `\n</source>`,
-    )
-    .join("\n");
-
-  return `<matter>\n${escapeXml(header)}\n</matter>\n\n<sources>\n${body}\n</sources>\n\nExtract the structured memo material from these sources, following the rules.`;
+export function buildAnalysisPrompt(
+  matter: { name: string; type: string | null; client: string | null; description: string | null },
+  sources: IndexedSource[],
+): string {
+  return `${buildMatterBlock(matter)}\n\n${buildSourcesBlock(sources)}\n\nExtract the structured memo material from these sources, following the rules.`;
 }
 
 export const DRAFT_SYSTEM_PROMPT = `You write the first draft of an internal legal memo in formal Modern Standard Arabic for a lawyer in Saudi Arabia to review and edit.

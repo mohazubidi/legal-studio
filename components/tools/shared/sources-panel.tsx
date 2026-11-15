@@ -7,7 +7,7 @@ import {
   processPendingSourcesAction,
   processSourceAction,
   removeSourceAction,
-} from "@/app/(workspace)/tools/legal-memo/actions";
+} from "@/app/(workspace)/tools/source-actions";
 import { StatusBadge } from "@/components/legal/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatFileSize } from "@/lib/utils";

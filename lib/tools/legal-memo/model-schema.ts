@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { modelCitationSchema } from "@/lib/tools/shared/model-citation";
 
 /**
  * What the model must return. Passed to the API as a structured-output schema
@@ -6,11 +7,7 @@ import { z } from "zod/v4";
  * Citations name a source (S1, S2…), a segment of it (p3, s2, t1…) and a quote
  * copied from that segment; the server checks every quote against the text.
  */
-const citation = z.object({
-  source_id: z.string(),
-  segment_id: z.string(),
-  quote: z.string(),
-});
+const citation = modelCitationSchema;
 
 export const FACT_CATEGORIES = [
   "party",
@@ -39,6 +36,6 @@ export const memoDraftSchema = z.object({
   sections: z.array(z.object({ heading: z.string(), body: z.string() })),
 });
 
-export type ModelCitation = z.infer<typeof citation>;
+export type { ModelCitation } from "@/lib/tools/shared/model-citation";
 export type MemoAnalysisOutput = z.infer<typeof memoAnalysisSchema>;
 export type MemoDraftOutput = z.infer<typeof memoDraftSchema>;

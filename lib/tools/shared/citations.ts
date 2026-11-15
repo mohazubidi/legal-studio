@@ -1,5 +1,5 @@
 import type { DocumentSegment } from "@/types/database";
-import type { ModelCitation } from "./model-schema";
+import type { ModelCitation } from "./model-citation";
 
 /** A source as presented to the model: a short id (S1…) mapped to the stored document. */
 export interface IndexedSource {

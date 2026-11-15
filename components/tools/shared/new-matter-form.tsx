@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { createMatterAction } from "@/app/(workspace)/tools/legal-memo/actions";
+import { createMatterAction } from "@/app/(workspace)/tools/source-actions";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ActionMessage } from "./action-message";
 
-export function NewMatterForm() {
+/** Creates a matter, then returns to `basePath?matter=<id>` (the tool that opened it). */
+export function NewMatterForm({ basePath }: { basePath: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +27,7 @@ export function NewMatterForm() {
         setError(result.message);
         return;
       }
-      router.push(`/tools/legal-memo?matter=${result.data.id}`);
+      router.push(`${basePath}?matter=${result.data.id}`);
       router.refresh();
     });
   }

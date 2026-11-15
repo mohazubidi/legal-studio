@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AUDIO_MIME_TYPES, DOCUMENTS_BUCKET, type UploadMimeType } from "@/config/constants";
 import { transcribeAudio } from "@/lib/ai/transcription";
 import { extractSegments, segmentParagraphs } from "@/lib/documents/extraction";
+import { parseSegmentsValue } from "@/lib/tools/shared/segments";
 import { documentStoragePath, SIGNATURE_BYTES, validateUpload } from "@/lib/documents/validation";
 import type { AppSupabaseClient } from "@/lib/supabase/server";
 import { documentMetadataSchema, firstIssue, uuidSchema, type DocumentMetadataInput } from "@/lib/validation/schemas";
@@ -22,12 +23,9 @@ function toStorableText(text: string): string {
   return text.replaceAll("\u0000", "");
 }
 
-const segmentsSchema = z.array(z.object({ id: z.string(), label: z.string(), text: z.string() }));
-
 /** Reads documents.segments defensively (it is jsonb). */
 export function parseSegments(value: Json | null): DocumentSegment[] {
-  const parsed = segmentsSchema.safeParse(value);
-  return parsed.success ? parsed.data : [];
+  return parseSegmentsValue(value);
 }
 
 function isAudio(mimeType: string): boolean {

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
-import { addTextSourceAction } from "@/app/(workspace)/tools/legal-memo/actions";
+import { addTextSourceAction } from "@/app/(workspace)/tools/source-actions";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

@@ -1,4 +1,4 @@
-import { ReferenceCollector, type IndexedSource, type VerifiedReference } from "./citations";
+import { ReferenceCollector, type IndexedSource, type VerifiedReference } from "@/lib/tools/shared/citations";
 import { INSUFFICIENT_EVIDENCE, type MemoContent, type MemoSourceSnapshot } from "./content";
 import type { MemoAnalysisOutput } from "./model-schema";
 

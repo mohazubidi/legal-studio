@@ -9,7 +9,7 @@ import { ProvenanceItem, ProvenanceLegend } from "@/components/legal/provenance"
 import { StatusBadge } from "@/components/legal/status-badge";
 import { DraftEditor } from "@/components/tools/legal-memo/draft-editor";
 import { ReviewControls } from "@/components/tools/legal-memo/review-controls";
-import { SOURCE_KIND_LABELS } from "@/components/tools/legal-memo/sources-panel";
+import { SOURCE_KIND_LABELS } from "@/components/tools/shared/sources-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isAIConfigured } from "@/lib/ai/config";
 import { createSupabaseServerClient, getSessionState } from "@/lib/supabase/server";

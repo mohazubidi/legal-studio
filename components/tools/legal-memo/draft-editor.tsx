@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { formatDateTime } from "@/lib/utils";
 import type { OutputStatus } from "@/types/database";
-import { ActionMessage } from "./action-message";
+import { ActionMessage } from "@/components/tools/shared/action-message";
 
 interface DraftEditorProps {
   outputId: string;

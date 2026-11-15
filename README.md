@@ -96,6 +96,17 @@ Citations are `source_references` rows (document, `segment_id`, page/section lab
 
 Server-side refusal fallback (`fallbacks: "default"`) is enabled, so a safety decline is retried on the API's default fallback model.
 
+## CaseMap (`/tools/casemap`)
+
+Turns a matter's processed sources into an interactive case map. It never decides which party is legally right.
+
+- **Six views:** parties; chronology (a table plus a proportional visual timeline); claims and each party's stated position; evidence map (evidence grouped by claim, each with its document, excerpt, and *what it appears to support*); contradictions (conflicting dates, amounts, facts or statements side by side); missing information.
+- **Extraction and interpretation are kept apart.** Only `supports` (evidence) and `interpretation` (contradictions) are AI interpretation, and they render in a separate labelled box.
+- **Sources:** every citation is verified like the memo's. An item with no verified citation is stored and shown as **unreferenced — requires review**. Citations are never fabricated. Clicking any item opens a side panel showing the document, page or section, and excerpt, with a link to the original.
+- **Dates** are kept as written. Hijri dates are converted to Gregorian by the server (Umm al-Qura via `Intl`), not by the model, and marked as converted. Missing day or month parts are never guessed.
+- **Filters:** party, claim, document, evidence type, date range. They are synced to the URL, so a filtered view or an open item (`?item=…`) can be shared.
+- **Shared code:** matter and source handling, citation verification, source indexing and output persistence live in `lib/tools/shared`, `components/tools/shared` and `app/(workspace)/tools/source-actions.ts`, and are used by both tools.
+
 ## Architecture
 
 ```

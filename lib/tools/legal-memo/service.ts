@@ -1,14 +1,15 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import type { StructuredAIProvider } from "@/lib/ai/provider";
-import { listDocuments, parseSegments } from "@/lib/data/documents";
+import { listDocuments } from "@/lib/data/documents";
+import { indexSources } from "@/lib/tools/shared/sources";
+import { getToolOutput, listToolOutputs, saveToolOutput } from "@/lib/tools/shared/output";
 import { getMatter } from "@/lib/data/matters";
 import { fail, fromPostgrest, ok, type DataResult } from "@/lib/data/result";
 import type { AppSupabaseClient } from "@/lib/supabase/server";
 import { uuidSchema } from "@/lib/validation/schemas";
-import type { DocumentRow, Json, OutputRow, OutputStatus, SourceReferenceRow } from "@/types/database";
-import type { IndexedSource } from "./citations";
-import { parseMemoContent, type MemoContent, type MemoSourceSnapshot } from "./content";
+import type { Json, OutputRow, OutputStatus, SourceReferenceRow } from "@/types/database";
+import { parseMemoContent, type MemoContent } from "./content";
 import { memoAnalysisSchema, memoDraftSchema } from "./model-schema";
 import {
   ANALYSIS_SYSTEM_PROMPT,
@@ -28,28 +29,7 @@ export interface MemoOutput {
   references: SourceReferenceRow[];
 }
 
-/** Indexes processed sources as S1, S2… and snapshots every source's processing state. */
-export function indexSources(documents: DocumentRow[]): { sources: IndexedSource[]; snapshot: MemoSourceSnapshot[] } {
-  const ordered = [...documents].sort((a, b) => a.created_at.localeCompare(b.created_at));
-  const sources: IndexedSource[] = [];
-  const snapshot: MemoSourceSnapshot[] = [];
-  for (const document of ordered) {
-    const segments = document.processing_status === "processed" ? parseSegments(document.segments) : [];
-    const included = segments.length > 0;
-    const label = included ? `S${sources.length + 1}` : "—";
-    if (included) sources.push({ sourceId: label, documentId: document.id, fileName: document.file_name, segments });
-    snapshot.push({
-      document_id: document.id,
-      label,
-      file_name: document.file_name,
-      source_kind: document.source_kind,
-      processing_status: document.processing_status,
-      processing_error: document.processing_error,
-      included,
-    });
-  }
-  return { sources, snapshot };
-}
+export { indexSources } from "@/lib/tools/shared/sources";
 
 /**
  * Stages 2–5: one structured generation over every processed source, then
@@ -107,68 +87,27 @@ export async function generateMemoAnalysis(
   return saveMemoRecord(supabase, matterId, `مذكرة قانونية — ${matter.data.matter_name}`, record);
 }
 
-/**
- * Persists a memo: the output row (always created as draft) and its verified
- * source_references. If any reference is rejected (RLS, cross-matter, …) the
- * output is removed so content never points at missing references.
- */
+/** Persists a memo and its verified references (shared tool-output path). */
 export async function saveMemoRecord(
   supabase: AppSupabaseClient,
   matterId: string,
   title: string,
   record: ReturnType<typeof buildMemoRecord>,
 ): Promise<DataResult<{ outputId: string }>> {
-  const { data: output, error: outputError } = await supabase
-    .from("outputs")
-    .insert({
-      matter_id: matterId,
-      tool_type: "legal_memo",
-      title: title.slice(0, 300),
-      content: record.content as unknown as Json,
-      status: "draft",
-    })
-    .select("id")
-    .single();
-  if (outputError) return fromPostgrest(outputError, "saveMemoRecord.output");
-
-  if (record.references.length > 0) {
-    const { error: refsError } = await supabase
-      .from("source_references")
-      .insert(record.references.map((reference) => ({ ...reference, output_id: output.id })));
-    if (refsError) {
-      await supabase.from("outputs").delete().eq("id", output.id);
-      return fromPostgrest(refsError, "saveMemoRecord.references");
-    }
-  }
-  return ok({ outputId: output.id });
+  return saveToolOutput(supabase, { matterId, toolType: "legal_memo", title, content: record.content, references: record.references });
 }
 
 /** Loads a memo output with validated content and its references. */
 export async function getMemo(supabase: AppSupabaseClient, outputId: string): Promise<DataResult<MemoOutput>> {
-  if (!uuidSchema.safeParse(outputId).success) return fail("not_found", "المذكرة غير موجودة.");
-  const { data, error } = await supabase
-    .from("outputs")
-    .select("*, source_references(*)")
-    .eq("id", outputId)
-    .eq("tool_type", "legal_memo")
-    .maybeSingle();
-  if (error) return fromPostgrest(error, "getMemo");
-  if (!data) return fail("not_found", "المذكرة غير موجودة.");
-  const content = parseMemoContent(data.content);
+  const loaded = await getToolOutput(supabase, outputId, "legal_memo");
+  if (!loaded.ok) return loaded.error.code === "not_found" ? fail("not_found", "المذكرة غير موجودة.") : loaded;
+  const content = parseMemoContent(loaded.data.output.content);
   if (!content) return fail("database_error", "محتوى المذكرة المحفوظ غير صالح ولا يمكن عرضه.");
-  const { source_references: references, ...output } = data;
-  return ok({ output, content, references });
+  return ok({ output: loaded.data.output, content, references: loaded.data.references });
 }
 
 export async function listMemos(supabase: AppSupabaseClient, matterId: string): Promise<DataResult<OutputRow[]>> {
-  if (!uuidSchema.safeParse(matterId).success) return fail("not_found", "الملف غير موجود.");
-  const { data, error } = await supabase
-    .from("outputs")
-    .select("*")
-    .eq("matter_id", matterId)
-    .eq("tool_type", "legal_memo")
-    .order("created_at", { ascending: false });
-  return error ? fromPostgrest(error, "listMemos") : ok(data);
+  return listToolOutputs(supabase, matterId, "legal_memo");
 }
 
 async function writeContent(supabase: AppSupabaseClient, outputId: string, content: MemoContent): Promise<DataResult<null>> {

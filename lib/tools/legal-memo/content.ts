@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sourceSnapshotSchema } from "@/lib/tools/shared/sources";
 import { FACT_CATEGORIES } from "./model-schema";
 
 /** Mandatory wording when the sources do not support an answer. */
@@ -11,15 +12,7 @@ export const INSUFFICIENT_EVIDENCE = "لا تتوفر معلومات كافية 
  */
 const referenceIds = z.array(z.string().uuid());
 
-export const memoSourceSnapshotSchema = z.object({
-  document_id: z.string().uuid(),
-  label: z.string(),
-  file_name: z.string(),
-  source_kind: z.string(),
-  processing_status: z.string(),
-  processing_error: z.string().nullable(),
-  included: z.boolean(),
-});
+export const memoSourceSnapshotSchema = sourceSnapshotSchema;
 
 export const memoContentSchema = z.object({
   version: z.literal(1),

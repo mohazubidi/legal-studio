@@ -15,9 +15,9 @@ export const TOOLS: readonly ToolDefinition[] = [
     id: "casemap",
     nameAr: "خريطة القضية",
     nameEn: "CaseMap",
-    descriptionAr: "تنظيم الوقائع والأطراف والتسلسل الزمني والمسائل محل النزاع.",
+    descriptionAr: "خريطة تفاعلية للأطراف والتسلسل الزمني والمطالبات والأدلة والتعارضات، مرتبطة بمصادرها.",
     icon: Network,
-    status: "coming_soon",
+    status: "available",
   },
   {
     id: "contract-compass",

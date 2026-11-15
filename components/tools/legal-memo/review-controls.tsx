@@ -12,7 +12,7 @@ import { APPROVAL_ACKNOWLEDGEMENT } from "@/config/constants";
 import { canTransition, REVIEW_ACTION_LABELS } from "@/lib/tools/legal-memo/review";
 import { formatDateTime } from "@/lib/utils";
 import type { OutputStatus } from "@/types/database";
-import { ActionMessage } from "./action-message";
+import { ActionMessage } from "@/components/tools/shared/action-message";
 
 interface ReviewControlsProps {
   outputId: string;
