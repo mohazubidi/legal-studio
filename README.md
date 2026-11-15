@@ -125,6 +125,29 @@ Turns one processed contract into a structured operational view. Its six views a
 
 **Review.** Each item can be marked "verified" or "needs correction" with a note. Marks are stored in `outputs.review_marks` (migration `0004`), so marking does not reset the review state. The output follows the shared draft → in review → reviewed → approved workflow.
 
+## RegDelta (`/tools/regdelta`)
+
+Compares Document A (previous version) with Document B (new version) **structurally**. The comparison has two layers.
+
+**Deterministic, on the server (`lib/tools/regdelta/provisions.ts`, `compare.ts`):**
+
+- **Splitting.** Each version is split into provisions. Recognised headings: `المادة 5`, `المادة (5/2)`, Arabic ordinals up to the hundreds (`المادة الحادية عشرة`), `البند`, `Article`. Text before the first article becomes a preamble. A document without numbering falls back to its sections, with a warning.
+- **Matching.** Provisions are paired by text similarity (Dice over word bigrams), with a bonus for the same article number:
+  - A provision matched under a different number is classified as **renumbered**, with a written uncertainty note.
+  - Same number but low similarity is flagged as a possible rewrite.
+  - An unmatched provision with a plausible counterpart is shown as added or removed, with a note naming that counterpart. Renumbering is never silently turned into a deletion plus an addition.
+- **Classification from the text.** The server detects added, removed, modified and renumbered provisions, plus changed deadlines (periods in digits or Arabic words, e.g. «خمسة عشر يومًا»), changed amounts or thresholds (currency or percent values, large numbers, years ignored), and changed definitions.
+- **Display.** Previous and new texts are verbatim from the documents. A word-level diff highlights edits inside modified provisions. Each side keeps its article and page and has its own source reference.
+
+**Model (interpretation only):** responsibility and procedural types, a summary and the apparent significance of each change, an assessment of uncertain matches, the **Potential Operational Impact** section (labelled as AI analysis requiring verification), and a preliminary compliance checklist built only from the two versions.
+
+**Guards:**
+- No external search.
+- Sentences claiming a version is in force are removed. Caveats such as "cannot be verified" are kept.
+- Definitive legal conclusions are replaced.
+
+**Review and editing:** reviewers can edit the explanations, the AI-suggested types, exclusions, impacts and checklist. Extracted text, locations and detected types cannot be edited. Edits are validated on the server, return the comparison to draft, and the shared review workflow applies before approval.
+
 ## Architecture
 
 ```

@@ -31,9 +31,9 @@ export const TOOLS: readonly ToolDefinition[] = [
     id: "regdelta",
     nameAr: "فروقات الأنظمة",
     nameEn: "RegDelta",
-    descriptionAr: "مقارنة التعديلات النظامية وبيان أثرها على الالتزامات القائمة.",
+    descriptionAr: "مقارنة هيكلية بين نسختين من نص تنظيمي: الأحكام المضافة والمحذوفة والمعدّلة، مع الأثر التشغيلي المحتمل وقائمة امتثال أولية.",
     icon: GitCompare,
-    status: "coming_soon",
+    status: "available",
   },
   {
     id: "matter-intake",

@@ -1,20 +1,14 @@
 import { normalizeForMatch } from "@/lib/tools/shared/citations";
+import { normalizeNumbers } from "@/lib/tools/shared/numbers";
+
+export { normalizeNumbers } from "@/lib/tools/shared/numbers";
+export { containsDefinitiveConclusion, NEUTRALIZED_NOTE } from "@/lib/tools/shared/language-guard";
 
 /**
  * Checks that values the model extracted (clause numbers, amounts, dates)
  * literally appear in the text it cited. Anything that does not is dropped:
  * the tool never shows a value the contract does not contain.
  */
-
-const EASTERN_DIGITS = /[٠-٩۰-۹]/g;
-
-/** Latin digits, no thousands separators, Arabic decimal comma as a dot. */
-export function normalizeNumbers(text: string): string {
-  return text
-    .replace(EASTERN_DIGITS, (d) => String((d.charCodeAt(0) - (d >= "۰" ? 0x06f0 : 0x0660)) % 10))
-    .replace(/(\d)٫(\d)/g, "$1.$2")
-    .replace(/(\d)[,٬'  ](?=\d{3}(?!\d))/g, "$1");
-}
 
 function prepare(text: string): string {
   return normalizeNumbers(normalizeForMatch(text));
@@ -50,28 +44,3 @@ export function amountAppears(amountText: string, haystack: string): boolean {
   return numbers.every((n) => hasNumberToken(n, text));
 }
 
-/**
- * Definitive legal conclusions the tool must not state without a configured
- * legal knowledge source (none is configured). Matched on normalised text.
- */
-const DEFINITIVE_PATTERNS = [
-  /غير\s*(?:قانوني|نظامي|مشروع)/,
-  /مخالف(?:ة)?\s*(?:لل)?(?:نظام|قانون)/,
-  /باطل/,
-  /بطلان/,
-  /(?:مخاطر|خطر|خطورة)\s*(?:عالية|عال|مرتفعة|مرتفع|كبيرة|جسيمة)/,
-  /(?:عالي|مرتفع)\s*(?:ة)?\s*(?:الخطورة|المخاطر)/,
-  /\billegal\b/i,
-  /\bunlawful\b/i,
-  /\bvoid\b/i,
-  /\bunenforceable\b/i,
-  /\bhigh[\s-]*risk\b/i,
-];
-
-export function containsDefinitiveConclusion(text: string): boolean {
-  const normalized = normalizeForMatch(text);
-  return DEFINITIVE_PATTERNS.some((pattern) => pattern.test(normalized));
-}
-
-export const NEUTRALIZED_NOTE =
-  "صياغة تحتاج تحققًا مهنيًا. حُجب وصف قاطع لأن الأداة لا تستند إلى مصدر معرفة قانونية مهيأ يدعم هذا الاستنتاج.";
