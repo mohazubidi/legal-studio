@@ -19,7 +19,10 @@ export type SourceKind =
   | "meeting_transcript"
   | "audio_recording"
   | "intake_form"
-  | "client_statement";
+  | "client_statement"
+  | "legal_text"
+  | "article"
+  | "regulation_update";
 
 /** A citable unit of a source's text: a PDF page, a group of paragraphs, or a transcript span. */
 export interface DocumentSegment {

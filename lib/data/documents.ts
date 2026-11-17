@@ -203,10 +203,13 @@ const TEXT_SOURCE_LABELS: Record<Exclude<SourceKind, "document" | "audio_recordi
   meeting_transcript: "محضر اجتماع",
   intake_form: "إجابات نموذج الاستقبال",
   client_statement: "رواية العميل",
+  legal_text: "نص قانوني",
+  article: "مقال",
+  regulation_update: "تحديث تنظيمي",
 };
 
 export const textSourceSchema = z.object({
-  kind: z.enum(["pasted_text", "lawyer_notes", "meeting_transcript", "intake_form", "client_statement"]),
+  kind: z.enum(["pasted_text", "lawyer_notes", "meeting_transcript", "intake_form", "client_statement", "legal_text", "article", "regulation_update"]),
   title: z.string().trim().max(120).optional(),
   text: z.string().trim().min(1, "النص فارغ.").max(200_000, "النص أطول من الحد المسموح (200 ألف حرف)."),
 });

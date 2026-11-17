@@ -49,3 +49,10 @@ describe("server / client module boundary", () => {
     expect(violations).toEqual([]);
   });
 });
+
+describe("workspace loading boundaries", () => {
+  it("has no loading.tsx in the workspace (it made server-action updates go stale)", () => {
+    const loading = sourceFiles(join(ROOT, "app", "(workspace)")).filter((f) => /[\\/]loading\.tsx$/.test(f));
+    expect(loading.map((f) => f.slice(ROOT.length + 1))).toEqual([]);
+  });
+});

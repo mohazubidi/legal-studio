@@ -4,10 +4,10 @@ import { getTranscriptionConfig } from "@/lib/ai/config";
 import type { DataResult } from "@/lib/data/result";
 import type { DocumentRow } from "@/types/database";
 import { SourcesPanel } from "./sources-panel";
-import { TextSourceForm } from "./text-source-form";
+import { TextSourceForm, type TextSourceKind } from "./text-source-form";
 
 /** Stage 1 for a matter: its sources with processing state, plus file upload and pasted text. */
-export function MatterSources({ matterId, documents }: { matterId: string; documents: DataResult<DocumentRow[]> }) {
+export function MatterSources({ matterId, documents, textKinds }: { matterId: string; documents: DataResult<DocumentRow[]>; textKinds?: TextSourceKind[] }) {
   return (
     <>
       {documents.ok ? (
@@ -22,7 +22,7 @@ export function MatterSources({ matterId, documents }: { matterId: string; docum
       </div>
       <div>
         <h3 className="mb-2 text-sm font-semibold">إضافة نص</h3>
-        <TextSourceForm matterId={matterId} />
+        <TextSourceForm matterId={matterId} kinds={textKinds} />
       </div>
     </>
   );

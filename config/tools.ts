@@ -47,9 +47,9 @@ export const TOOLS: readonly ToolDefinition[] = [
     id: "legal-content",
     nameAr: "المحتوى القانوني",
     nameEn: "Legal Content",
-    descriptionAr: "صياغة محتوى توعوي قانوني دقيق بلغة واضحة للجمهور.",
+    descriptionAr: "تحويل النصوص القانونية والتحديثات وملاحظات المحامي إلى محتوى بقوالب تصميم ثابتة: تنبيه، شرائح، منشور، تحديث للعملاء، أسئلة شائعة.",
     icon: PenLine,
-    status: "coming_soon",
+    status: "available",
   },
 ];
 

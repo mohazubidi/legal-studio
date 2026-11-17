@@ -8,10 +8,10 @@ import { getSessionState } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 /**
- * No loading.tsx at this level on purpose: a loading boundary above the dynamic
- * [matterId] / [outputId] pages made Next.js 15.5 drop the refreshed page that a
- * server action returns, leaving the UI stale (verified on a production build).
- * Output pages keep their own leaf-level loading.tsx.
+ * No loading.tsx anywhere in the workspace, on purpose: a loading boundary above
+ * or at the dynamic [matterId] / [outputId] pages made Next.js 15.5 sometimes drop
+ * the refreshed page that a server action returns, leaving the UI stale until a
+ * reload (reproduced on production builds, at the workspace and at output pages).
  *
  * Protected workspace boundary. The middleware redirects early; this layout
  * re-verifies on the server so no workspace page renders without a valid user.

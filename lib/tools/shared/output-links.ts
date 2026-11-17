@@ -11,13 +11,11 @@ export const TOOL_ID_BY_TYPE: Record<ToolType, ToolId> = {
   legal_content: "legal-content",
 };
 
-/** Where a saved output opens, or null for a tool that has no output page yet. */
+/** Where a saved output opens (null is kept for a future tool without an output page). */
 export function outputHref(toolType: ToolType, outputId: string): string | null {
   switch (toolType) {
     case "matter_intake":
       return `/tools/matter-intake/brief/${outputId}`;
-    case "legal_content":
-      return null;
     default:
       return `/tools/${TOOL_ID_BY_TYPE[toolType]}/${outputId}`;
   }

@@ -12,6 +12,7 @@ import { listToolOutputs } from "@/lib/tools/shared/output";
 import { formatDateTime } from "@/lib/utils";
 import type { ToolType } from "@/types/database";
 import { MatterSources } from "./matter-sources";
+import type { TextSourceKind } from "./text-source-form";
 import { NewMatterForm } from "./new-matter-form";
 
 export interface GenerateContext {
@@ -33,6 +34,8 @@ interface ToolSetupProps {
   generateDescription: string;
   renderGenerate: (context: GenerateContext) => ReactNode;
   outputsTitle: string;
+  /** Kinds offered by "add text" (defaults to pasted text, lawyer notes, meeting transcript). */
+  textKinds?: TextSourceKind[];
 }
 
 export function ToolStage({ n, title, description, children }: { n: number; title: string; description: string; children: ReactNode }) {
@@ -124,7 +127,7 @@ export async function ToolSetup(props: ToolSetupProps) {
           title="المصادر ومعالجتها"
           description="ارفع المستندات والتسجيلات، أو الصق نصًا أو ملاحظات أو محضر اجتماع. تُستخرج النصوص مع الصفحة أو القسم، وتُحفظ أخطاء المعالجة لكل مصدر."
         >
-          <MatterSources matterId={selected.id} documents={documents} />
+          <MatterSources matterId={selected.id} documents={documents} textKinds={props.textKinds} />
         </ToolStage>
 
         <div className="space-y-6">

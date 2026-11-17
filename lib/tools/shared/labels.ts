@@ -12,4 +12,7 @@ export const SOURCE_KIND_LABELS: Record<SourceKind, string> = {
   audio_recording: "تسجيل صوتي",
   intake_form: "إجابات نموذج الاستقبال",
   client_statement: "رواية العميل",
+  legal_text: "نص قانوني",
+  article: "مقال",
+  regulation_update: "تحديث تنظيمي",
 };

@@ -17,8 +17,8 @@ describe("output links", () => {
     expect(outputHref("matter_intake", ID)).toBe(`/tools/matter-intake/brief/${ID}`);
   });
 
-  it("has no page for a tool that is not built yet", () => {
-    expect(outputHref("legal_content", ID)).toBeNull();
+  it("opens legal content in its studio", () => {
+    expect(outputHref("legal_content", ID)).toBe(`/tools/legal-content/${ID}`);
   });
 
   it("maps every tool type the database accepts", () => {
@@ -33,7 +33,7 @@ describe("shared labels", () => {
 
   it("names every source kind (used by server pages, so it lives outside client modules)", () => {
     expect(Object.keys(SOURCE_KIND_LABELS).sort()).toEqual(
-      ["audio_recording", "client_statement", "document", "intake_form", "lawyer_notes", "meeting_transcript", "pasted_text"].sort(),
+      ["article", "audio_recording", "client_statement", "document", "intake_form", "lawyer_notes", "legal_text", "meeting_transcript", "pasted_text", "regulation_update"].sort(),
     );
   });
 });

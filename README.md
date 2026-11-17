@@ -21,12 +21,13 @@ npm run dev
 
 1. Create a Supabase project.
 2. Copy the **Project URL** and the **anon public key** into `.env.local`.
-3. Run the migrations **in order** (0001 → 0005), in the SQL editor or with `supabase db push`:
+3. Run the migrations **in order** (0001 → 0006), in the SQL editor or with `supabase db push`:
    - `0001_profiles.sql`: the `profiles` table, its RLS policies and the signup trigger.
    - `0002_core_schema.sql`: matters, documents, outputs, source references, the audit log, every RLS policy, and the private `matter-documents` storage bucket with its policies.
    - `0003_legal_memo.sql`: source kinds and text segments, audio formats, reference segments, the review workflow trigger, and a fix to the 0002 audit trigger.
    - `0004_review_marks.sql`: per-item review marks on outputs.
    - `0005_matter_intake.sql`: the `intake` matter status (a matter can never return to it), the `intake_form` / `client_statement` source kinds, and `finalize_intake()`, which creates the matter from a brief in one transaction under RLS.
+   - `0006_legal_content.sql`: the `legal_text` / `article` / `regulation_update` source kinds used by the Legal Content System.
 4. In **Authentication → URL Configuration**, add `http://localhost:3000/auth/callback` as a redirect URL. This is only needed if email confirmation is enabled.
 
 `NEXT_PUBLIC_*` values are inlined at build time, so set them **before** `npm run build` or a deployment build, and rebuild after you change them.
@@ -171,6 +172,41 @@ A guided intake that turns a new client's information into a structured **Matter
   - Sentences giving legal advice are removed.
 - **Edit, then create.** The brief editor is validated on the server: an empty field must be "not provided", and a value cannot hide behind it. An edited value loses the client's quotes and becomes "confirmed". "إنشاء الملف" turns the provisional matter into an active one from the saved brief (client required; nothing filled in for missing fields). Discarding an intake deletes it with its files.
 
+## Legal Content (`/tools/legal-content`)
+
+Turns supplied legal material into consistent content with a fixed design system. It is controlled, repeatable production, not free-form design.
+
+- **Inputs:** sources of the matter. Legal text, articles and regulation updates (source kinds added in `0006`), lawyer notes, pasted text and uploaded documents.
+- **Output types** (`lib/tools/legal-content/formats.ts`):
+
+  | Output | Layout | Sections |
+  |---|---|---|
+  | Legal Alert | A4 document | fixed sections |
+  | Carousel | 7 slides | cover, context, key point, explanation, implication, practical takeaway, source |
+  | LinkedIn Post | square card | fixed sections |
+  | Client Update | A4 document | fixed sections |
+  | FAQ | A4 document | 3 to 6 questions |
+  | Legal Awareness Post | square card | fixed sections |
+
+  Each section has hard length limits so the text fits its card.
+- **Design system:**
+  - `lib/tools/legal-content/design.ts` holds the tokens: canvas sizes, type scale and title hierarchy, spacing and line heights.
+  - `components/tools/legal-content/content-card.tsx` is the only card. Every card has the same fixed regions in the same order: brand bar (firm name and monogram), kicker, title, body, source field, footer (disclaimer, page number, draft mark).
+  - Sizes are in container units, so the editor preview, the screen and print share one layout.
+- **Provenance** (`record.ts`, `guard.ts`):
+  - A *source quote* is kept only if its text appears verbatim in the cited segment. It is shown in guillemets with its location.
+  - *AI explanation* loses any sentence that adds a number, article, regulation or decision absent from the input, gives advice, asserts legal effect, or states a definitive conclusion.
+  - Text the lawyer writes or edits is marked *lawyer*. An edited quote that no longer matches the source becomes lawyer text without a citation.
+  - The source section and the attribution are built from the sources, not by the model.
+- **Editing:**
+  - The editor (`content-studio.tsx`) edits text only. Structure is fixed.
+  - It applies the same rules as the server for the live preview, shows length counters, and warns when text overflows a fixed card.
+  - Edits are validated on the server (`edits.ts`). Saving changed content returns a reviewed or approved output to draft.
+- **Export:**
+  - `/print/legal-content/[id]` (protected) renders only the cards, each on a page of its canvas size (documents on A4). The browser's print dialog saves it as PDF.
+  - `/api/legal-content/[id]/text` downloads the saved content as UTF-8 text, including quotes with locations, the source and the disclaimer.
+  - Cards carry a draft mark until the content is approved.
+
 ## Architecture
 
 ```
@@ -213,7 +249,7 @@ tests/db/            RLS and ownership tests against a real Postgres
 
 - With Supabase configured, every workspace page reads the signed-in user's data under RLS (`lib/data/workspace.ts`). The samples in `data/mock.ts` appear only in local preview mode, under the preview banner.
 - Every mutating server action calls `revalidateWorkspace()`, and the action's response carries the refreshed page. Client components must not add `router.refresh()` after a server action: the second render can race the action's and leave the page stale. Uploads go through an API route, so the upload area refreshes once the batch is stored.
-- There is no `loading.tsx` at the workspace level. A loading boundary above the dynamic `[matterId]` / `[outputId]` pages made Next.js 15.5 drop the page returned by a server action, in production builds only. Output pages keep their own leaf `loading.tsx`.
+- There is no `loading.tsx` in the workspace. A loading boundary above or at the dynamic `[matterId]` / `[outputId]` pages made Next.js 15.5 sometimes drop the page returned by a server action (production builds), leaving the page stale until a reload.
 - Timestamps are formatted in `Asia/Riyadh` (`DISPLAY_TIME_ZONE` in `lib/utils.ts`), so server and browser render the same text and hydration does not fail for users outside UTC.
 - Server components must not import values (constants, functions) from `"use client"` modules; `tests/unit/client-boundary.test.ts` enforces it.
 

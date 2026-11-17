@@ -12,9 +12,13 @@ const ALL_KINDS = [
   { value: "lawyer_notes", label: "ملاحظات المحامي" },
   { value: "meeting_transcript", label: "محضر أو تفريغ اجتماع" },
   { value: "client_statement", label: "رواية العميل بكلماته" },
+  { value: "legal_text", label: "نص قانوني" },
+  { value: "article", label: "مقال" },
+  { value: "regulation_update", label: "تحديث تنظيمي" },
 ] as const;
 
-type Kind = (typeof ALL_KINDS)[number]["value"];
+export type TextSourceKind = (typeof ALL_KINDS)[number]["value"];
+type Kind = TextSourceKind;
 const DEFAULT_KINDS: Kind[] = ["pasted_text", "lawyer_notes", "meeting_transcript"];
 
 export function TextSourceForm({ matterId, kinds = DEFAULT_KINDS }: { matterId: string; kinds?: Kind[] }) {
