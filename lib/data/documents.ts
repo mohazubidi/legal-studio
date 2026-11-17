@@ -66,6 +66,10 @@ export interface UploadDocumentInput {
   metadata?: DocumentMetadataInput;
   /** Defaults to `audio_recording` for audio and `document` otherwise. */
   sourceKind?: SourceKind;
+  /** Plain text only: citable segments to store instead of paragraph segmentation. */
+  segments?: DocumentSegment[];
+  /** The library law (and the version of its text) this source was copied from. */
+  library?: { lawId: string; version: string };
 }
 
 /**
@@ -81,7 +85,7 @@ export interface UploadDocumentInput {
  */
 export async function uploadDocument(
   supabase: AppSupabaseClient,
-  { matterId, file, metadata, sourceKind }: UploadDocumentInput,
+  { matterId, file, metadata, sourceKind, segments, library }: UploadDocumentInput,
 ): Promise<DataResult<DocumentRow>> {
   const meta = documentMetadataSchema.safeParse(metadata ?? {});
   if (!meta.success) return fail("invalid_input", firstIssue(meta.error));
@@ -108,6 +112,7 @@ export async function uploadDocument(
       document_category: meta.data.document_category,
       document_date: meta.data.document_date,
       source_kind: sourceKind ?? (isAudio(check.mimeType) ? "audio_recording" : "document"),
+      ...(library ? { library_law_id: library.lawId, library_version: library.version } : {}),
     })
     .select("*")
     .single();
@@ -129,7 +134,7 @@ export async function uploadDocument(
     ? {
         processing_status: "processed" as const,
         extracted_text: inlineText,
-        segments: (sourceKind === "intake_form" ? segmentQuestionAnswers(inlineText) : segmentParagraphs(inlineText)) as unknown as Json,
+        segments: (segments ?? (sourceKind === "intake_form" ? segmentQuestionAnswers(inlineText) : segmentParagraphs(inlineText))) as unknown as Json,
       }
     : { processing_status: "uploaded" as const };
 

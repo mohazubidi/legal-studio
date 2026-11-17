@@ -21,13 +21,14 @@ npm run dev
 
 1. Create a Supabase project.
 2. Copy the **Project URL** and the **anon public key** into `.env.local`.
-3. Run the migrations **in order** (0001 → 0006), in the SQL editor or with `supabase db push`:
+3. Run the migrations **in order** (0001 → 0007), in the SQL editor or with `supabase db push`:
    - `0001_profiles.sql`: the `profiles` table, its RLS policies and the signup trigger.
    - `0002_core_schema.sql`: matters, documents, outputs, source references, the audit log, every RLS policy, and the private `matter-documents` storage bucket with its policies.
    - `0003_legal_memo.sql`: source kinds and text segments, audio formats, reference segments, the review workflow trigger, and a fix to the 0002 audit trigger.
    - `0004_review_marks.sql`: per-item review marks on outputs.
    - `0005_matter_intake.sql`: the `intake` matter status (a matter can never return to it), the `intake_form` / `client_statement` source kinds, and `finalize_intake()`, which creates the matter from a brief in one transaction under RLS.
    - `0006_legal_content.sql`: the `legal_text` / `article` / `regulation_update` source kinds used by the Legal Content System.
+   - `0007_legal_library.sql`: the shared Legal Library (`library_laws`, `library_articles`), read-only for signed-in users and written only by `library_upsert_law()` with the service role; plus the library link on documents.
 4. In **Authentication → URL Configuration**, add `http://localhost:3000/auth/callback` as a redirect URL. This is only needed if email confirmation is enabled.
 
 `NEXT_PUBLIC_*` values are inlined at build time, so set them **before** `npm run build` or a deployment build, and rebuild after you change them.
@@ -207,6 +208,60 @@ Turns supplied legal material into consistent content with a fixed design system
   - `/api/legal-content/[id]/text` downloads the saved content as UTF-8 text, including quotes with locations, the source and the disclaimer.
   - Cards carry a draft mark until the content is approved.
 
+## Legal Library (`/library`)
+
+A shared library of laws and regulations (مكتبة الأنظمة), with each article's text, the official source URL and when the text was fetched.
+
+- **Reading:**
+  - Every signed-in user can browse and search it.
+  - Search ignores diacritics, tatweel, alef and hamza forms, ta marbuta and alef maqsura. It covers law titles and article text.
+  - Every page states that the text is a copy as of its fetch date, and that the official source governs.
+- **Writing:** nobody can write the library through the app.
+  - Grants and RLS give users `select` only.
+  - Laws are written by the import script, through `library_upsert_law()`, which only the service role may execute.
+  - `library_upsert_law()` replaces a law's articles atomically. It computes `content_hash` in the database from the stored text, and reports `created`, `updated` or `unchanged`.
+- **Using a law in a matter:**
+  - On a law's page, **إضافة إلى قضية** copies the whole law, or chosen articles, into one of the user's matters as a processed `legal_text` source.
+  - The copy has one citable segment per article, labelled with the article (for example `المادة الثالثة`), so the tools quote it and cite the article.
+  - The copy records the law and the version (`library_version`) it came from, and the copy itself never changes.
+  - If the library's text changes later, the matter's sources list and the document page flag the copy as outdated and link to the current text.
+
+### Importing
+
+```bash
+npm run library:import -- path/to/laws --dry-run   # validate only, no credentials needed
+npm run library:import -- path/to/laws              # write to Supabase
+```
+
+- **Credentials:** `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, set in the shell or in a local `.env.library` file. That file is ignored by git.
+  - Run the import from a trusted machine only.
+  - Never put the service-role key in `.env.local`, in Vercel, or in any `NEXT_PUBLIC_` variable. The script refuses to run if a `NEXT_PUBLIC_` variable holds it.
+- **Behaviour:**
+  - Every `.json` file under the path is read. A file holds one law or an array of laws.
+  - Invalid files are reported and skipped; the others are still imported. The exit code is non-zero if any file failed.
+  - Re-running is safe. Unchanged laws only have their fetch date refreshed.
+
+Format of one law (`lib/library/format.ts` validates it):
+
+```json
+{
+  "source": "boe",
+  "external_id": "stable id at the source",
+  "title": "نظام …",
+  "category": "optional",
+  "instrument": "optional: the issuing instrument as printed",
+  "issued_on": "optional, as printed",
+  "amended_on": "optional, as printed",
+  "status": "in_force | repealed | unknown",
+  "source_url": "https://…",
+  "fetched_at": "2026-11-17T08:00:00Z",
+  "articles": [{ "label": "المادة الأولى", "text": "…" }]
+}
+```
+
+- Text is stored exactly as given (trimmed). Article labels must be unique within a law.
+- A reader that converts pages of the Bureau of Experts site (laws.boe.gov.sa) into this format is not included yet. It will be built from saved sample pages of the site.
+
 ## Architecture
 
 ```
@@ -279,7 +334,7 @@ If a `source` item has no citation, it shows a warning. Approving an output requ
 
 ## Scripts
 
-`npm run dev` · `npm run lint` · `npm run typecheck` · `npm run build` · `npm test` · `npm run test:db`
+`npm run dev` · `npm run lint` · `npm run typecheck` · `npm run build` · `npm test` · `npm run test:db` · `npm run library:import`
 
 - `npm test` runs the unit tests. The DB tests are skipped unless `TEST_DATABASE_URL` is set.
 - `npm run test:db` starts a throwaway local Postgres (15+), applies a minimal stand-in for Supabase's `auth` and `storage` schemas plus every migration, then checks the ownership boundaries as two different users. Nothing is persisted.

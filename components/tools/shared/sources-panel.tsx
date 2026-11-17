@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { FileAudio, FileText, RotateCcw, Trash2 } from "lucide-react";
 import {
@@ -11,6 +12,7 @@ import { FileName } from "@/components/legal/file-name";
 import { StatusBadge } from "@/components/legal/status-badge";
 import { Button } from "@/components/ui/button";
 import { formatDateTime, formatFileSize } from "@/lib/utils";
+import type { LibraryFreshness } from "@/lib/library/format";
 import { SOURCE_KIND_LABELS } from "@/lib/tools/shared/labels";
 import type { DocumentRow } from "@/types/database";
 import { ActionMessage } from "./action-message";
@@ -20,13 +22,15 @@ interface SourcesPanelProps {
   matterId: string;
   documents: Pick<
     DocumentRow,
-    "id" | "file_name" | "file_size_bytes" | "source_kind" | "processing_status" | "processing_error" | "created_at"
+    "id" | "file_name" | "file_size_bytes" | "source_kind" | "processing_status" | "processing_error" | "created_at" | "library_law_id"
   >[];
   transcriptionConfigured: boolean;
+  /** Sources copied from the Legal Library, compared with the library now. */
+  freshness?: Record<string, LibraryFreshness>;
 }
 
 /** Stage 1: every source with its processing state, error, and retry. */
-export function SourcesPanel({ matterId, documents, transcriptionConfigured }: SourcesPanelProps) {
+export function SourcesPanel({ matterId, documents, transcriptionConfigured, freshness = {} }: SourcesPanelProps) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ text: string; tone: "error" | "success" } | null>(null);
@@ -99,6 +103,18 @@ export function SourcesPanel({ matterId, documents, transcriptionConfigured }: S
                   <Trash2 aria-hidden />
                 </Button>
               </div>
+              {freshness[doc.id] === "changed" ? (
+                <p className="mt-2 rounded-sm bg-verify-soft px-2 py-1 text-xs leading-5 text-verify">
+                  تغيّر نص هذا النظام في مكتبة الأنظمة بعد إضافته، والنسخة هنا لم تتغير.{" "}
+                  {doc.library_law_id ? (
+                    <Link href={`/library/${doc.library_law_id}`} className="font-medium underline underline-offset-4">
+                      راجع النص الحالي
+                    </Link>
+                  ) : null}
+                </p>
+              ) : freshness[doc.id] === "removed" ? (
+                <p className="mt-2 rounded-sm bg-verify-soft px-2 py-1 text-xs leading-5 text-verify">حُذف هذا النظام من مكتبة الأنظمة بعد إضافته. تحقّق من المصدر الرسمي.</p>
+              ) : null}
               {doc.processing_error ? (
                 <p className="mt-2 rounded-sm bg-danger-soft px-2 py-1 text-xs leading-5 text-danger">{doc.processing_error}</p>
               ) : null}

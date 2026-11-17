@@ -1,4 +1,4 @@
-import { Briefcase, FileStack, FolderOutput, LayoutDashboard, Wrench, type LucideIcon } from "lucide-react";
+import { BookOpen, Briefcase, FileStack, FolderOutput, LayoutDashboard, Wrench, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   href: string;
@@ -11,6 +11,7 @@ export const MAIN_NAV: readonly NavItem[] = [
   { href: "/", labelAr: "لوحة التحكم", labelEn: "Dashboard", icon: LayoutDashboard },
   { href: "/matters", labelAr: "القضايا والملفات", labelEn: "Matters", icon: Briefcase },
   { href: "/documents", labelAr: "المستندات", labelEn: "Documents", icon: FileStack },
+  { href: "/library", labelAr: "مكتبة الأنظمة", labelEn: "Legal Library", icon: BookOpen },
   { href: "/tools", labelAr: "الأدوات", labelEn: "Tools", icon: Wrench },
   { href: "/outputs", labelAr: "المخرجات", labelEn: "Outputs", icon: FolderOutput },
 ];

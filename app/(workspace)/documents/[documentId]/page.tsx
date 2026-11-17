@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/legal/status-badge";
 import { Button } from "@/components/ui/button";
 import { getDocument as getSampleDocument, getMatter as getSampleMatter } from "@/data/mock";
 import { getDocument, parseSegments } from "@/lib/data/documents";
+import { libraryFreshness } from "@/lib/data/library";
 import { getMatter } from "@/lib/data/matters";
 import { workspaceSource } from "@/lib/data/workspace";
 import { SOURCE_KIND_LABELS } from "@/lib/tools/shared/labels";
@@ -43,7 +44,8 @@ export default async function DocumentPage({ params }: Props) {
     return <ErrorState title="تعذّر تحميل المستند" description={document.error.message} />;
   }
   const doc = document.data;
-  const matter = await getMatter(source.supabase, doc.matter_id);
+  const [matter, freshness] = await Promise.all([getMatter(source.supabase, doc.matter_id), libraryFreshness(source.supabase, [doc])]);
+  const libraryState = freshness[doc.id];
   const segments = parseSegments(doc.segments);
   const canDownload = doc.processing_status !== "pending";
 
@@ -110,6 +112,18 @@ export default async function DocumentPage({ params }: Props) {
               </div>
             ))}
           </dl>
+          {libraryState ? (
+            <div className="space-y-1 border-t border-border px-5 py-3 text-sm">
+              <p className="text-muted-foreground">منسوخ من مكتبة الأنظمة.</p>
+              {libraryState === "changed" ? <p className="text-verify">تغيّر نص النظام في المكتبة بعد النسخ، والنسخة هنا لم تتغير.</p> : null}
+              {libraryState === "removed" ? <p className="text-verify">حُذف النظام من المكتبة بعد النسخ.</p> : null}
+              {doc.library_law_id ? (
+                <Link href={`/library/${doc.library_law_id}`} className="font-medium text-primary hover:underline">
+                  فتح النظام في المكتبة
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
           {matter.ok ? (
             <div className="border-t border-border px-5 py-3">
               <Link href={`/matters/${matter.data.id}`} className="text-sm font-medium text-primary hover:underline">

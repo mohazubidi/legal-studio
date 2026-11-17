@@ -29,7 +29,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-"${RUN_AS[@]}" "$PG_BIN/initdb" -D "$WORK/data" -U postgres --auth=trust >/dev/null
+"${RUN_AS[@]}" "$PG_BIN/initdb" -D "$WORK/data" -U postgres --auth=trust -E UTF8 --locale=C >/dev/null
 "${RUN_AS[@]}" "$PG_BIN/pg_ctl" -D "$WORK/data" -l "$WORK/log" \
   -o "-p $PORT -k $WORK -c listen_addresses=''" -w start >/dev/null
 

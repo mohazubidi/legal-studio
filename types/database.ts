@@ -12,6 +12,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export type MatterStatus = "active" | "on_hold" | "closed" | "intake";
 export type DocumentProcessingStatus = "pending" | "uploaded" | "processing" | "processed" | "failed";
 export type OutputStatus = "draft" | "in_review" | "reviewed" | "approved";
+export type LibraryLawStatus = "in_force" | "repealed" | "unknown";
 export type SourceKind =
   | "document"
   | "pasted_text"
@@ -92,6 +93,8 @@ export interface Database {
           processing_error: string | null;
           source_kind: SourceKind;
           segments: Json | null;
+          library_law_id: string | null;
+          library_version: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -105,6 +108,8 @@ export interface Database {
           document_date?: string | null;
           document_category?: string | null;
           source_kind?: SourceKind;
+          library_law_id?: string | null;
+          library_version?: string | null;
         };
         Update: {
           file_name?: string;
@@ -208,6 +213,49 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      library_laws: {
+        Row: {
+          id: string;
+          source: string;
+          external_id: string;
+          title: string;
+          category: string | null;
+          instrument: string | null;
+          issued_on: string | null;
+          amended_on: string | null;
+          status: LibraryLawStatus;
+          source_url: string;
+          fetched_at: string;
+          content_hash: string;
+          article_count: number;
+          search_title: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      library_articles: {
+        Row: {
+          law_id: string;
+          position: number;
+          label: string;
+          text: string;
+          search_text: string;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [
+          {
+            foreignKeyName: "library_articles_law_id_fkey";
+            columns: ["law_id"];
+            isOneToOne: false;
+            referencedRelation: "library_laws";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
@@ -225,6 +273,9 @@ export interface Database {
         };
         Returns: string;
       };
+      library_normalize: { Args: { t: string }; Returns: string };
+      /** service_role only: the import script. */
+      library_upsert_law: { Args: { p_law: Json }; Returns: Json };
     };
     Enums: {
       matter_status: MatterStatus;
@@ -246,3 +297,5 @@ export type DocumentRow = Tables<"documents">;
 export type OutputRow = Tables<"outputs">;
 export type SourceReferenceRow = Tables<"source_references">;
 export type AuditLogRow = Tables<"audit_logs">;
+export type LibraryLawRow = Tables<"library_laws">;
+export type LibraryArticleRow = Tables<"library_articles">;
